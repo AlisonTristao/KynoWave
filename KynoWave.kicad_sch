@@ -7644,6 +7644,16 @@
 	)
 	(wire
 		(pts
+			(xy 104.14 118.11) (xy 105.41 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "24d52ca9-f4fe-4165-a186-898447afdd92")
+	)
+	(wire
+		(pts
 			(xy 148.59 34.29) (xy 148.59 36.83)
 		)
 		(stroke
@@ -8764,7 +8774,7 @@
 	)
 	(wire
 		(pts
-			(xy 91.44 139.7) (xy 95.25 139.7)
+			(xy 91.44 139.7) (xy 93.98 139.7)
 		)
 		(stroke
 			(width 0)
@@ -9264,6 +9274,16 @@
 	)
 	(wire
 		(pts
+			(xy 101.6 139.7) (xy 102.87 139.7)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b6edb5cb-9946-4f6a-8cdf-32fca23e1430")
+	)
+	(wire
+		(pts
 			(xy 138.43 158.75) (xy 147.32 158.75)
 		)
 		(stroke
@@ -9431,6 +9451,16 @@
 			(type default)
 		)
 		(uuid "c23f217d-fe9f-4fc6-bf7e-5d67d39f2ffe")
+	)
+	(wire
+		(pts
+			(xy 93.98 118.11) (xy 96.52 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c33094bd-ba75-44dd-ab51-b53a08d29d49")
 	)
 	(wire
 		(pts
@@ -22430,7 +22460,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10uF"
+		(property "Value" "C10uF"
 			(at 40.386 182.372 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -23627,7 +23657,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 99.06 139.7 270)
+		(at 97.79 139.7 270)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -23637,7 +23667,7 @@
 		(dnp no)
 		(uuid "38c3d060-5aa8-4675-a65c-070bf778c455")
 		(property "Reference" "R17"
-			(at 99.06 137.16 90)
+			(at 97.79 137.16 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -23647,8 +23677,8 @@
 				)
 			)
 		)
-		(property "Value" "220"
-			(at 99.06 137.16 90)
+		(property "Value" "R220"
+			(at 97.79 137.16 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -23658,7 +23688,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
-			(at 99.06 137.922 90)
+			(at 97.79 137.922 90)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -23669,7 +23699,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 99.06 139.7 0)
+			(at 97.79 139.7 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -23680,7 +23710,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 99.06 139.7 0)
+			(at 97.79 139.7 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -24646,8 +24676,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0.1uF"
-			(at 40.386 173.99 90)
+		(property "Value" "C0.1uF"
+			(at 41.148 173.99 90)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -26921,6 +26951,85 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:R")
+		(at 100.33 118.11 270)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "72ea1b88-7068-4015-ba89-c2a99b45545f")
+		(property "Reference" "R24"
+			(at 100.33 115.57 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "R220"
+			(at 100.33 115.57 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
+			(at 100.33 116.332 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 100.33 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 100.33 118.11 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "da510295-c369-49c0-82bf-f2372bd929f6")
+		)
+		(pin "1"
+			(uuid "a01f32fb-276c-44e3-898b-d0cfbabf82e8")
+		)
+		(instances
+			(project "KynoWave"
+				(path "/e530ddeb-d79c-47cf-9d9f-281db0581a93"
+					(reference "R24")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector:Conn_01x15_Pin")
 		(at 20.32 237.49 180)
 		(unit 1)
@@ -28506,6 +28615,87 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:LED")
+		(at 109.22 118.11 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "8f9acd4f-546a-4269-b5aa-90610fa6018b")
+		(property "Reference" "D7"
+			(at 108.9025 121.92 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "LED"
+			(at 110.49 115.062 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "LED_THT:LED_D1.8mm_W1.8mm_H2.4mm_Horizontal_O1.27mm_Z1.6mm"
+			(at 109.22 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 109.22 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 109.22 118.11 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "12a277ad-0df7-4620-aeac-652e4dbce1b9")
+		)
+		(pin "2"
+			(uuid "023a0cc6-cbfb-46f9-bf48-3e7d8264bb2e")
+		)
+		(instances
+			(project "KynoWave"
+				(path "/e530ddeb-d79c-47cf-9d9f-281db0581a93"
+					(reference "D7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Switch:SW_MEC_5E")
 		(at 162.56 81.28 0)
 		(unit 1)
@@ -29780,7 +29970,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "C0.01uF"
+		(property "Value" "C10nF"
 			(at 214.884 91.186 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -30372,7 +30562,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "C0.01uF"
+		(property "Value" "C10nF"
 			(at 214.884 54.356 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -31542,6 +31732,83 @@
 			(project "KynoWave"
 				(path "/e530ddeb-d79c-47cf-9d9f-281db0581a93"
 					(reference "#PWR031")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3.3V")
+		(at 113.03 118.11 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "cb2aa247-e7c6-4119-98bd-b50e44dbf6cb")
+		(property "Reference" "#PWR065"
+			(at 113.03 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+3.3V"
+			(at 114.046 114.3 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 113.03 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 113.03 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3.3V\""
+			(at 113.03 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "cd3ccd4f-9919-4ab2-bf09-2ea2d27e4f6b")
+		)
+		(instances
+			(project "KynoWave"
+				(path "/e530ddeb-d79c-47cf-9d9f-281db0581a93"
+					(reference "#PWR065")
 					(unit 1)
 				)
 			)
@@ -33473,7 +33740,7 @@
 				)
 			)
 		)
-		(property "Value" "220"
+		(property "Value" "R220"
 			(at 97.79 130.81 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -33646,6 +33913,83 @@
 			(project "KynoWave"
 				(path "/e530ddeb-d79c-47cf-9d9f-281db0581a93"
 					(reference "J4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 93.98 118.11 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "ef21be20-76cc-4e63-881c-160412d5fce9")
+		(property "Reference" "#PWR064"
+			(at 93.98 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 95.25 123.19 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 93.98 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 93.98 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 93.98 118.11 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a14657ec-fda2-4a3d-860a-ea4dec93c639")
+		)
+		(instances
+			(project "KynoWave"
+				(path "/e530ddeb-d79c-47cf-9d9f-281db0581a93"
+					(reference "#PWR064")
 					(unit 1)
 				)
 			)
