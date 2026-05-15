@@ -8,7 +8,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <SharedMessageTypes.h>
-#include <esp_err.h>
 #include <stdarg.h>
 
 #ifndef SHARED_MESSAGE_TYPES_H
@@ -18,7 +17,7 @@
 class Logger {
 public:
     // Define a type for the send callback function
-    using SendCallback = esp_err_t (*)(const uint8_t *data, size_t len);
+    using SendCallback = bool (*)(const uint8_t *data, size_t len);
 
     // initialize metods
     Logger();
@@ -96,7 +95,7 @@ private:
     bool check_mutex();     // check if the mutex is available without waiting
     void free_mutex();      // release the mutex
 
-    static esp_err_t defaultSendCallback(const uint8_t *data, size_t len);
+    static bool defaultSendCallback(const uint8_t *data, size_t len);
     static void defaultCommandCallback(const String& cmd);
 };
 

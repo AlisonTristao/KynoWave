@@ -50,10 +50,10 @@ void Logger::set_send_callback(SendCallback callback) {
     free_mutex();
 }
 
-esp_err_t Logger::defaultSendCallback(const uint8_t *data, size_t len) {
+bool Logger::defaultSendCallback(const uint8_t *data, size_t len) {
     (void)data;
     (void)len;
-    return ESP_FAIL;
+    return false;
 }
 
 void Logger::insert_log(const int16_t *sound_data, size_t len) {
