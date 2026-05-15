@@ -19,11 +19,11 @@ void Logger::begin() {
 
     // add 4 logs
     // the max packet size, the max message size, the protocol overhead size and the max messages
-    insert_log("Logger initialized.", logType::INFO);
-    insert_log("Max packet message size: " + String(MAX_PACKET_MESSAGE_SIZE) + " bytes.", logType::INFO);
-    insert_log("Max message size: " + String(MAX_MESSAGE_SIZE) + " bytes.", logType::INFO);
-    insert_log("Protocol overhead size: " + String(PROTOCOL_OVERHEAD_SIZE) + " bytes.", logType::INFO);
-    insert_log("Max messages in buffer: " + String(MAX_MESSAGES_IN_RAM) + ".", logType::INFO);
+    insert_log(logType::INFO, "Logger initialized.");
+    insert_log(logType::INFO, "Max packet message size: "   + String(MAX_PACKET_MESSAGE_SIZE) + " bytes.");
+    insert_log(logType::INFO, "Max message size: "          + String(MAX_MESSAGE_SIZE) + " bytes.");
+    insert_log(logType::INFO, "Protocol overhead size: "    + String(PROTOCOL_OVERHEAD_SIZE) + " bytes.");
+    insert_log(logType::INFO, "Max messages in buffer: "    + String(MAX_MESSAGES_IN_RAM) + ".");
 }
 
 bool Logger::wait_for_mutex() {
@@ -56,7 +56,7 @@ esp_err_t Logger::defaultSendCallback(const uint8_t *data, size_t len) {
     return ESP_FAIL;
 }
 
-void Logger::insert_log(const int16_t *sound_data, size_t len, logType type) {
+void Logger::insert_log(const int16_t *sound_data, size_t len) {
     // verify the mutex is created and try to take it before inserting the log,
     if (sound_data == nullptr || len == 0) return;
 
@@ -66,11 +66,40 @@ void Logger::insert_log(const int16_t *sound_data, size_t len, logType type) {
     if (!wait_for_mutex()) return;
 
     // insert the log message into the buffer, using the current timestamp in milliseconds for the log entry
-    insert_log_impl(data, byte_len, type, millis());
+    insert_log_impl(data, byte_len, logType::I2SD, millis());
     free_mutex();
 }
 
-void Logger::insert_log(const String& msg, logType type) {
+void Logger::insert_log(logType type, const char* format, ...) {
+    // verify the mutex is created and try to take it before inserting the log
+    if (!wait_for_mutex()) return;
+
+    // temporary buffer to hold the formatted string
+    char buffer[512]; 
+
+    // initialize the variable argument list
+    va_list args;
+    va_start(args, format);
+
+    // format the string into the buffer and get the actual length
+    int len = vsnprintf(buffer, sizeof(buffer), format, args);
+
+    va_end(args);
+
+    // check if formatting was successful and within bounds
+    if (len > 0) {
+        size_t final_len = (len < (int)sizeof(buffer)) ? (size_t)len : (sizeof(buffer) - 1);
+        
+        // convert the formatted buffer to bytes and call the implementation
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer);
+        insert_log_impl(data, final_len, type, millis());
+    }
+
+    // always release the mutex after the operation
+    free_mutex();
+}
+
+void Logger::insert_log(logType type, const String& msg) {
     // verify the mutex is created and try to take it before inserting the log, 
     // to ensure thread safety when multiple tasks are inserting logs concurrently
     if (!wait_for_mutex()) return;

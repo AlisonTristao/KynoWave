@@ -56,7 +56,7 @@ void setup() {
 
     // init the serial communication and print a log message to indicate that the serial is initialized
     Serial.begin(baud);
-    logger.insert_log("Serial initialized at baud.", logType::INFO);
+    logger.insert_log(logType::INFO, "Serial initialized at baud: %u", baud);
 
     // create a void packet to send the logger obj to the tasks
     void* logger_ptr = static_cast<void*>(&logger);
@@ -65,19 +65,13 @@ void setup() {
     startTask01(logger_ptr, CORE_0); // warning, this core is used to wifi and bluetooth too
     startTask02(logger_ptr, CORE_1);
 
-    const uint32_t free_heap = esp_get_free_heap_size();
-    const uint32_t min_free_heap = esp_get_minimum_free_heap_size();
-    const uint32_t free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
-    const uint32_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-
-    logger.insert_log("Free heap: " + String(free_heap) + " bytes", logType::DEBG);
-    logger.insert_log("Min free heap: " + String(min_free_heap) + " bytes", logType::DEBG);
-    logger.insert_log("Free 8bit heap: " + String(free_8bit) + " bytes", logType::DEBG);
-    logger.insert_log("Free PSRAM: " + String(free_psram) + " bytes", logType::DEBG);
+    logger.insert_log(logType::DEBG, "free heap: %u", (unsigned)esp_get_free_heap_size());
+    logger.insert_log(logType::DEBG, "free 8bit heap: %u", (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT));
+    logger.insert_log(logType::DEBG, "free psram: %u", (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 }
 
 void loop() {
-    logger.insert_log("stopping the main loop...", logType::DEBG);
+    logger.insert_log(logType::DEBG, "stopping the main loop...");
 
     // array de 16 bytes para simular um pacote de dados de som, com valores aleatórios
     int16_t sound_data[16];

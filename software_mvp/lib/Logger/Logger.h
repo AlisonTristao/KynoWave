@@ -9,6 +9,7 @@
 #include <freertos/semphr.h>
 #include <SharedMessageTypes.h>
 #include <esp_err.h>
+#include <stdarg.h>
 
 #ifndef SHARED_MESSAGE_TYPES_H
 #error "This library depends on SharedMessageTypes.h, to use the data structures and definitions for the log messages. "
@@ -41,8 +42,9 @@ public:
     * @param msg The log message to be inserted. This is a String object that can contain any text.
     * @param type The type of the log message, using the logType enum to categorize
     */
-    void insert_log(const String& msg, logType type);
-    void insert_log(const int16_t *sound_data, size_t len, logType type = logType::I2SD); // add a I2SD type for sound data
+    void insert_log(logType type, const String& msg);
+    void insert_log(logType type, const char* format, ...);
+    void insert_log(const int16_t *sound_data, size_t len); // add a I2SD type for sound data
 
     /*
     * @brief Send the log messages that are currently in the logger's buffer using the configured send callback.

@@ -10,7 +10,7 @@ void Task02Code(void * pvParameters) {
     Logger* logger = static_cast<Logger*>(pvParameters);
     
     // add a log message to indicate that the task is running and the core it is running on
-    logger->insert_log("Task 2 iniciada no core " + String(xPortGetCoreID()), logType::INFO);
+    logger->insert_log(logType::INFO, "Task 2 iniciada no core %u", xPortGetCoreID());
     
     while(true) {
         logger->send_logger_live(); 
