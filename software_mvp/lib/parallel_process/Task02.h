@@ -2,7 +2,9 @@
 #define TASK_02_H
 
 #include <Arduino.h>
+#include "Logger.h"
 
-void startTask02();
+// receive the void parameter from the task
+void startTask02(void* pvParameters);
 
 #endif
