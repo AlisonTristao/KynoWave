@@ -7,10 +7,9 @@
 // internal libraries
 #include <Task01.h>
 #include <Task02.h> 
-#include <Logger.h>
+#include <KynoWave.h>
 
 // header
-#include <Output.h>
 #include <Settings.h>
 
 // define a baud rate for the serial communication
@@ -18,36 +17,28 @@
     #define BAUDRATE 115200 // default baud rate if not defined in platformio.ini
 #endif
 
-// create the logger to add the messagens 
-Logger logger;
-
-// create a shell to run terminal commands
-TinyShell shell;
+// create the instance of the kynowave class, to use the static members
+KynoWave kynowave;
 
 void setup() {
     // set the send callback of the logger to the function that will print the messages to the serial
-    logger.begin();
-    logger.set_send_callback(sendToSerial);
-
-    // init the serial communication and print a log message to indicate that the serial is initialized
-    Serial.begin(BAUDRATE);
-    logger.insert_log(logType::INFO, "Serial initialized at baud: %u", BAUDRATE);
+    kynowave.begin();
 
     // create a void packet to send the logger obj to the tasks
-    void* logger_ptr = static_cast<void*>(&logger);
+    void* kynowave_ptr = static_cast<void*>(&kynowave);
 
-    // init the tasks, passing the logger pointer as a parameter
-    startTask01(logger_ptr, CORE_0); // warning, this core is used to wifi and bluetooth too
-    startTask02(logger_ptr, CORE_1);
+    // init the tasks, passing the kyno pointer as a parameter
+    startTask01(kynowave_ptr, CORE_0); // warning, this core is used to wifi and bluetooth too
+    startTask02(kynowave_ptr, CORE_1);
 
     // saves the free memory
-    logger.insert_log(logType::DEBG, "Free heap: %0.2f KB", (float)esp_get_free_heap_size() / 1024);
-    logger.insert_log(logType::DEBG, "Free 8bit heap: %0.2f KB", (float)heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024);
-    logger.insert_log(logType::DEBG, "Free psram: %0.2f KB", (float)heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024);
+    kynowave.logger.insert_logf(logType::DEBG, "Free heap: %0.2f KB",       (float)esp_get_free_heap_size() / 1024);
+    kynowave.logger.insert_logf(logType::DEBG, "Free 8bit heap: %0.2f KB",  (float)heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024);
+    kynowave.logger.insert_logf(logType::DEBG, "Free psram: %0.2f KB",      (float)heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024);
 }
 
 void loop() {
-    Serial.println("Main loop running...");
-    logger.insert_log(logType::DEBG, "stopping the main loop...");
-    vTaskDelete(NULL); 
+    // stopping the loop to avoid consuming CPU time, since we are using tasks to run the code in parallel
+    kynowave.logger.insert_log(logType::DEBG, "Main loop is idle...");
+    vTaskDelay(portMAX_DELAY);
 }

@@ -42,7 +42,7 @@ public:
     * @param type The type of the log message, using the logType enum to categorize
     */
     void insert_log(logType type, const String& msg);
-    void insert_log(logType type, const char* format, ...);
+    void insert_logf(logType type, const char* format, ...);
     void insert_log(const int16_t *sound_data, size_t len); // add a I2SD type for sound data
 
     /*
@@ -50,7 +50,7 @@ public:
     * This method should be called periodically (e.g., in a task) to ensure that the log messages are sent out. 
     * It will send all the messages in the buffer and then clear it
     */
-    void send_logger_live();
+    void send_live_logger();
 
 private:
     // private members for the logger

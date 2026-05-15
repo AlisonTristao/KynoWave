@@ -11,7 +11,7 @@
 #define PROTOCOL_OVERHEAD_SIZE  10
 #define MAX_MESSAGE_SIZE        ((MAX_PACKET_MESSAGE_SIZE - PROTOCOL_OVERHEAD_SIZE) -1) // -1 to ensure we have space for the null terminator
 #define MAX_MESSAGES_IN_RAM     1024// limit for messages in memory - watch out for available ram limits
-#define LOGGER_MUTEX_TIMEOUT_MS 50  // time in ms to wait for the logger to be available - used to avoid deleting messages during printing
+#define LOGGER_MUTEX_TIMEOUT_MS 1000 // time in ms to wait for the logger to be available - used to avoid deleting messages during printing
 
 // enum to define log types, categorizing sent messages
 enum class logType : uint8_t {
