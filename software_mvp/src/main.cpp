@@ -2,25 +2,7 @@
 #include <Task01.h>
 #include <Task02.h> 
 #include <Logger.h>
-
-String crazyFrogDisse = R"=====(
-    Uma vez crazy frog disse: 
-    A-ring-ding-ding-ding-ding-ding!
-    Bwem-bwem!
-
-    A-ring-ding-ding-ding-ding-ding!
-    Bwem-bwem!
-
-    A-ring-ding-ding-ding-ding-ding!
-    Bwem-bwem!
-    A-ring-ding-ding-ding-p-p-p-p-p-p-p-p!
-
-    BEM-BEM!
-
-    Ring-ding-ding-ding-ding-ding-ding-ding-ding!
-    Ring-ding-ding-ding-ding-ding-ding-ding-ding!
-    Bem-bem!
-)=====";
+#include <Settings.h>
 
 // define a baud rate for the serial communication
 #ifndef BAUDRATE
@@ -72,12 +54,11 @@ void setup() {
     void* logger_ptr = static_cast<void*>(&logger);
 
     // init the tasks, passing the logger pointer as a parameter
-    startTask01(logger_ptr); // warning, this core is used to wifi and bluetooth too
-    startTask02(logger_ptr);
+    startTask01(logger_ptr, CORE_0); // warning, this core is used to wifi and bluetooth too
+    startTask02(logger_ptr, CORE_1);
 }
 
 void loop() {
-    logger.insert_log(crazyFrogDisse, logType::DEBUG);
-    logger.insert_log("stopping the main loop...", logType::DEBUG);
+    logger.insert_log("stopping the main loop...", logType::DEBG);
     vTaskDelete(NULL); 
 }

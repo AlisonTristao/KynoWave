@@ -5,6 +5,6 @@
 #include "Logger.h"
 
 // receive the void parameter from the task
-void startTask02(void* pvParameters);
+void startTask02(void* pvParameters, uint8_t CORE);
 
 #endif

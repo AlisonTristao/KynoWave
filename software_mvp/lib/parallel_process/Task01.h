@@ -4,6 +4,6 @@
 #include <Arduino.h>
 #include "Logger.h"
 
-void startTask01(void* pvParameters);
+void startTask01(void* pvParameters, uint8_t CORE);
 
 #endif

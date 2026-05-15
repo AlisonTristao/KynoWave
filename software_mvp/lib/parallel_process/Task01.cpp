@@ -19,7 +19,7 @@ void Task01Code(void * pvParameters) {
     }
 }
 
-void startTask01(void* pvParameters) {
+void startTask01(void* pvParameters, uint8_t CORE) {
     xTaskCreatePinnedToCore(
         Task01Code, 
         "Task01", 
@@ -27,6 +27,6 @@ void startTask01(void* pvParameters) {
         pvParameters, 
         2, 
         &handleTask1, 
-        CORE_0  // Fixado no Core 0
+        CORE  // Fixado no Core 0
     );
 }
