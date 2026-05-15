@@ -23,7 +23,7 @@ void Logger::begin() {
     insert_log("Max packet message size: " + String(MAX_PACKET_MESSAGE_SIZE) + " bytes.", logType::INFO);
     insert_log("Max message size: " + String(MAX_MESSAGE_SIZE) + " bytes.", logType::INFO);
     insert_log("Protocol overhead size: " + String(PROTOCOL_OVERHEAD_SIZE) + " bytes.", logType::INFO);
-    insert_log("Max messages in buffer: " + String(MAX_MESSAGES) + ".", logType::INFO);
+    insert_log("Max messages in buffer: " + String(MAX_MESSAGES_IN_RAM) + ".", logType::INFO);
 }
 
 bool Logger::wait_for_mutex() {
@@ -56,75 +56,89 @@ esp_err_t Logger::defaultSendCallback(const uint8_t *data, size_t len) {
     return ESP_FAIL;
 }
 
+void Logger::insert_log(const int16_t *sound_data, size_t len, logType type) {
+    // verify the mutex is created and try to take it before inserting the log,
+    if (sound_data == nullptr || len == 0) return;
+
+    // convert the sound data to send as bytes, calculating the byte length based on the number of int16_t elements and their size
+    const size_t byte_len = len * sizeof(int16_t);
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(sound_data);
+    if (!wait_for_mutex()) return;
+
+    // insert the log message into the buffer, using the current timestamp in milliseconds for the log entry
+    insert_log_impl(data, byte_len, type, millis());
+    free_mutex();
+}
+
 void Logger::insert_log(const String& msg, logType type) {
     // verify the mutex is created and try to take it before inserting the log, 
     // to ensure thread safety when multiple tasks are inserting logs concurrently
     if (!wait_for_mutex()) return;
 
+    // convert the string to send as bytes
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(const_cast<char*>(msg.c_str()));
+
     // insert the log message into the buffer, using the current timestamp in milliseconds for the log entry
-    insert_log_impl(msg, type, millis());
+    insert_log_impl(data, msg.length(), type, millis());
     free_mutex();
 }
 
 uint8_t Logger::calculate_checksum(const message& msg) {
     uint32_t sum = 0;
-    for (size_t i = 0; i < MAX_MESSAGE_SIZE && msg.msg[i] != '\0'; ++i)
-        sum += static_cast<uint8_t>(msg.msg[i]);
+    const size_t len = (msg.content.byte == nullptr) ? 0 :
+        ((msg.content.size > MAX_MESSAGE_SIZE) ? MAX_MESSAGE_SIZE : msg.content.size);
+    for (size_t i = 0; i < len; ++i)
+        sum += static_cast<uint8_t>(msg.content.byte[i]);
     sum += static_cast<uint8_t>(msg.type);
     sum += static_cast<uint8_t>(msg.packet_number);
     sum += static_cast<uint8_t>(msg.total_packets);
     return static_cast<uint8_t>(sum % 256);
 }
 
-void Logger::insert_log_impl(const String& msg, logType type, uint32_t ts) {
-    if (msg.length() == 0) return;
+void Logger::insert_log_impl(const uint8_t* data, size_t len, logType type, uint32_t ts) {
+    if (data == nullptr || len == 0) return;
 
     // calculates the number of packets needed to send the message, considering the maximum message size and protocol overhead
-    const size_t msgLen = msg.length();
+    const size_t msgLen = len;
     size_t total_packets_to_send = (msgLen + MAX_MESSAGE_SIZE - 1) / MAX_MESSAGE_SIZE;
     if (total_packets_to_send == 0) // should not happen since we check for empty message
         total_packets_to_send = 1;
-
-    // packet index is 8 bits, so we can only have up to 256 packets (0-255). 
-    // If the message is too long, we will truncate it to fit in 256 packets.
-    if (total_packets_to_send > 256)
-        total_packets_to_send = 256;
 
     // loop to create and store each packet in the messages array, handling fragmentation if necessary
     for (size_t i = 0; i < total_packets_to_send; ++i) {
         // variables to get the caracteres for the current packet, 
         // calculating the start index and the number of characters to copy for this packet
         const size_t start      = i * MAX_MESSAGE_SIZE;
-        const size_t remaining  = (start < msgLen) ? (msgLen - start) : 0;                          // remaining characters to send starting from the current packet's start index
+        const size_t remaining  = (start < msgLen) ? (msgLen - start) : 0; // remaining characters to send starting from the current packet's start index
         const size_t length     = (remaining > MAX_MESSAGE_SIZE) ? MAX_MESSAGE_SIZE : remaining;    // length of the substring for the current packet
 
-        // create a message struct for the current packet, filling in the timer, type, packet number, total packets, and checksum (if needed)
-        message m = {};
+        if (message_count >= MAX_MESSAGES_IN_RAM)
+            message_count = 0;
+
+        message& m = messages[message_count++];
         m.timer = ts;
         m.type = (i == 0U) ? type : logType::PAKG; // only the first packet gets the original type, the rest are marked as PAKG (packet)
         m.packet_number = static_cast<uint8_t>(i + 1);
-        m.total_packets = static_cast<uint8_t>(total_packets_to_send);
+        m.total_packets = static_cast<uint16_t>(total_packets_to_send);
+        m.content.size = length;
 
-        // calculate checksum with the sum of the bytes of the message content, type, packet number, and total packets, modulo 256. This is a simple checksum to verify the integrity of the message on the receiving end.
+        // copy the payload for the current packet into the message struct
+        if (m.content.byte) {
+            memset(m.content.byte, 0, MAX_MESSAGE_SIZE + 1);
+            if (length > 0)
+                memcpy(m.content.byte, data + start, length);
+            m.content.text[length] = '\0';
+        }
+
+        // calculate checksum with the sum of the bytes of the message content, type, packet number, and total packets, modulo 256. 
+        // This is a simple checksum to verify the integrity of the message on the receiving end.
         m.checksum = calculate_checksum(m);
-
-        // copy the substring for the current packet into the message struct, ensuring it is null-terminated and does not exceed the maximum message size
-        memset(m.msg, 0, sizeof(m.msg));
-        if (length > 0)
-            strncpy(m.msg, msg.c_str() + start, length);
-        m.msg[length] = '\0';
-
-        // verify if the message counter has reached the maximum number of messages
-        reset_loop_counter();
-
-        // add the message to the messages array and increment the message count
-        messages[message_count++] = m;
     }
 }
 
 void Logger::reset_loop_counter() {
     if (check_mutex()) {
-        if (message_count == MAX_MESSAGES)
+        if (message_count == MAX_MESSAGES_IN_RAM)
             message_count = 0;
         free_mutex();
     }
@@ -142,8 +156,8 @@ void Logger::send_logger_live() {
     uint32_t end = message_count;
 
     // just verify the indexes to be in the correct range
-    if (start >= MAX_MESSAGES)  start = 0;
-    if (end > MAX_MESSAGES)     end = MAX_MESSAGES;
+    if (start >= MAX_MESSAGES_IN_RAM)  start = 0;
+    if (end > MAX_MESSAGES_IN_RAM)     end = MAX_MESSAGES_IN_RAM;
     if (start == end)           return; // nothing to send
 
     // dont need to wait for the mutex here, 
@@ -162,7 +176,7 @@ void Logger::send_logger_live() {
             send_entry(i);
     } else {
         // Buffer wrapped: send from last_index to end of array and then from 0 to message_count.
-        for (uint32_t i = start; i < MAX_MESSAGES; ++i)
+        for (uint32_t i = start; i < MAX_MESSAGES_IN_RAM; ++i)
             send_entry(i);
 
         for (uint32_t i = 0; i < end; ++i)
@@ -171,7 +185,7 @@ void Logger::send_logger_live() {
     
     // to change the last index to the current message count, we need to take the mutex
     wait_for_mutex();
-    last_index = (end == MAX_MESSAGES) ? 0 : end;
+    last_index = (end == MAX_MESSAGES_IN_RAM) ? 0 : end;
     free_mutex();
 }
 

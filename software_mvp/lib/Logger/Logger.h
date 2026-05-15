@@ -10,6 +10,10 @@
 #include <SharedMessageTypes.h>
 #include <esp_err.h>
 
+#ifndef SHARED_MESSAGE_TYPES_H
+#error "This library depends on SharedMessageTypes.h, to use the data structures and definitions for the log messages. "
+#endif
+
 class Logger {
 public:
     // Define a type for the send callback function
@@ -38,6 +42,7 @@ public:
     * @param type The type of the log message, using the logType enum to categorize
     */
     void insert_log(const String& msg, logType type);
+    void insert_log(const int16_t *sound_data, size_t len, logType type = logType::I2SD); // add a I2SD type for sound data
 
     /*
     * @brief Send the log messages that are currently in the logger's buffer using the configured send callback.
@@ -48,7 +53,7 @@ public:
 
 private:
     // private members for the logger
-    message messages[MAX_MESSAGES] = {};
+    message messages[MAX_MESSAGES_IN_RAM] = {};
     uint32_t message_count = 0;
     uint32_t last_index = 0;
     SemaphoreHandle_t mutex_ = NULL;
@@ -72,15 +77,17 @@ private:
     void reset_loop_counter();
 
     /*
-    * @brief Internal method to insert a log message into the buffer without locking. 
-    * This method is called by the public insert_log method, which handles the locking to ensure thread safety. 
+    * @brief Internal method to insert a log message into the buffer without locking.
+    * This method is called by the public insert_log methods, which handle the locking to ensure thread safety.
     * The insert_log_impl method assumes that the caller has already acquired the mutex lock before calling it.
-    * 
-    * @param msg The log message to be inserted. This is a String object that can contain any text.
+    *
+    * @param data Pointer to payload bytes
+    * @param len Payload length in bytes
     * @param type The type of the log message, using the logType enum to categorize
     * @param ts The timestamp in milliseconds when the log message was created. This is used for tracking the age of the log messages and for debugging purposes.
+    * @param null_terminate Whether to add a null terminator for text payloads
     */
-    void insert_log_impl(const String& msg, logType type, uint32_t ts);
+    void insert_log_impl(const uint8_t* data, size_t len, logType type, uint32_t ts);
 
     // funtion to menager the mutex
     bool wait_for_mutex();  // wait indefinitely for the mutex to be available
