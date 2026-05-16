@@ -14,11 +14,11 @@ void Task01Code(void * pvParameters) {
     kynowave->logger.insert_logf(logType::INFO, "Task 1 iniciada no core %u", xPortGetCoreID());
 
     while (true) {
-        // send the messagens to ouput channel
-        kynowave->logger.send_live_logger();
-
         // delay de 1 ms para evitar que a task consuma 100% do CPU
         vTaskDelay(pdMS_TO_TICKS(100));
+
+        // send the messagens to ouput channel
+        kynowave->logger.send_live_logger();
     }
 }
 

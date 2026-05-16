@@ -17,12 +17,20 @@ void Task02Code(void * pvParameters) {
     String command;
 
     while (true) {
-        if (KynoWave::readFromSerial(command)) {
-            // kynowave.logger.insert_logf(logType::ERRO, "Error processing command: %s", command);
-            uint8_t result = kynowave->shell.run_command_line(command.c_str());
-        }
-
+        // delay to avoid consuming too much CPU time...
         vTaskDelay(pdMS_TO_TICKS(1)); 
+
+        // check for serial input and run the command in the shell if there is any, 
+        // this allows us to interact with the shell from the serial monitor while the tasks are running
+        if (!KynoWave::readFromSerial(command))
+            continue;
+            
+        // run the command in the shell and get the result code
+        uint8_t result = kynowave->shell.run_command_line(command.c_str());
+
+        // if return some error, make something...
+        if (result != RESULT_OK)
+            kynowave->logger.insert_logf(logType::ERRO, "Error running command: %s, result code: %u", command.c_str(), result);
     }
 }
 
