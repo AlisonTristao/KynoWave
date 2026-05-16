@@ -29,9 +29,6 @@ class KynoWave {
         * @param len Length of the data in bytes, which should be equal to the size
         */
         static bool sendToSerial(const uint8_t *data, size_t len);
-        void writeShellOutput(const string& output) {
-            Serial.println(output.c_str());
-        }
         
         /*
         * @brief default input callback,
