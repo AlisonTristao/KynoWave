@@ -6,11 +6,12 @@
 // sizes and limits for logger messages, ensuring they are manageable and do not exceed memory limits
 // max espnow size = 250
 // protocol overhead: 4 bytes for timestamp + 1 byte for type + 2 byte for packet number + 2 byte for total packets + 1 byte for checksum = 10 bytes
+// + 4 byte para o length
 // therefore, max message size is 250 - 10 = 240 bytes
-#define MAX_PACKET_MESSAGE_SIZE 250 // if we change the transport protocol, we can increase this value
-#define PROTOCOL_OVERHEAD_SIZE  10
-#define MAX_MESSAGE_SIZE        ((MAX_PACKET_MESSAGE_SIZE - PROTOCOL_OVERHEAD_SIZE) -1) // -1 to ensure we have space for the null terminator
-#define MAX_MESSAGES_IN_RAM     1024// limit for messages in memory - watch out for available ram limits
+#define MAX_PACKET_SIZE         250 // if we change the transport protocol, we can increase this value
+#define PROTOCOL_OVERHEAD_SIZE  14
+#define MAX_CONTENT_SIZE        ((MAX_PACKET_SIZE - PROTOCOL_OVERHEAD_SIZE) -1) // -1 to ensure we have space for the null terminator
+#define MAX_PACKETS_IN_RAM      1024 // limit for messages in memory - watch out for available ram limits
 #define LOGGER_MUTEX_TIMEOUT_MS 1000 // time in ms to wait for the logger to be available - used to avoid deleting messages during printing
 
 // enum to define log types, categorizing sent messages
@@ -27,21 +28,18 @@ enum class logType : uint8_t {
 // creates a struct union to convert the message text or sound data to a byte array, 
 // this will be used to send the messages over the transport protocol
 struct messageContent_t {
-    size_t size;
+    size_t size; 
     union { 
-        char*       text; 
-        int16_t*    i2sD; 
-        uint8_t*    byte; 
-    }; // anonymous union to store either text or sound data as bytes for sending
+        char    text[MAX_CONTENT_SIZE + 1]; // +1 for null terminator             
+        int16_t i2sD[MAX_CONTENT_SIZE / sizeof(int16_t) + 1];
+        uint8_t byte[MAX_CONTENT_SIZE + 1];              
+    }; 
 
-    // constructor to initialize the union with a byte array of the specified size
-    // with this, we can create a data with different sizes
-    messageContent_t(size_t s = MAX_MESSAGE_SIZE + 1) : size(s), byte((uint8_t*) malloc(s)) {}
-    ~messageContent_t() { if(byte) free(byte); }
-    messageContent_t(const messageContent_t& other) : size(other.size) {
-        byte = (uint8_t*) malloc(size);
-        if (byte && other.byte)
-            memcpy(byte, other.byte, size);
+    // contrutctor to initialize the size and clear the content
+    messageContent_t() : size(0) {
+        memset(byte, 0, MAX_CONTENT_SIZE + 1);
+        // set the null terminator for the text content to ensure it is always a valid string
+        text[MAX_CONTENT_SIZE] = '\0';
     }
 };
 
@@ -51,9 +49,9 @@ typedef struct {
     // message overhead for control and integrity verification
     uint32_t    timer;          // timestamp in ms to indicate when the message was created
     logType     type;           // message type, using the logtype enum to categorize the message
-    uint8_t     packet_number;  // packet number for fragmented messages
+    uint16_t    packet_number;  // packet number for fragmented messages
     uint16_t    total_packets;  // total packets for fragmented messages
-    uint16_t    checksum;       // simple checksum to verify message integrity
+    uint8_t     checksum;       // simple checksum to verify message integrity
 
     // actual message content, limited to max_message_size to ensure the full packet stays within limits
     messageContent_t content;

@@ -16,9 +16,9 @@ bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
     );
 
     if (msg->type == logType::I2SD) {
-        int16_t* sound_data = (msg->content.i2sD);
-        for (size_t i = 0; i < msg->content.size / sizeof(int16_t); ++i)
-            Serial.printf("%d ", sound_data[i]);
+        size_t num_samples = msg->content.size / sizeof(int16_t);
+        for (size_t i = 0; i < num_samples; ++i)
+            Serial.printf("%d ", msg->content.i2sD[i]);
         Serial.print("\n");
     } else
         Serial.printf("%s\n", msg->content.text);

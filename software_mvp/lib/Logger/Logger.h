@@ -54,7 +54,7 @@ public:
 
 private:
     // private members for the logger
-    message messages[MAX_MESSAGES_IN_RAM] = {};
+    message messages[MAX_PACKETS_IN_RAM] = {};
     uint32_t message_count = 0;
     uint32_t last_index = 0;
     SemaphoreHandle_t mutex_ = NULL;
@@ -69,7 +69,7 @@ private:
     * @param msg The log message for which to calculate the checksum.
     * @return The calculated checksum.
     */
-    uint8_t calculate_checksum(const message& msg);
+    uint8_t calculate_checksum(const message &msg);
 
     /*
     * @brief Reset the loop counter, which is used to keep track of the number of messages in the buffer. 
