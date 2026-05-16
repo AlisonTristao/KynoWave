@@ -49,8 +49,8 @@ void KynoWave::begin() {
     logger.insert_logf(logType::INFO, "Serial initialized at baud: %u", BAUDRATE);
 
     // setup the logger
-    logger.set_send_callback(KynoWave::sendToSerial);
     logger.begin();
+    logger.set_send_callback(KynoWave::sendToSerial);
 
     // setup the shell input callback    
     shell.begin();
