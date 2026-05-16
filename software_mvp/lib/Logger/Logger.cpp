@@ -103,14 +103,14 @@ void Logger::insert_logf(logType type, const char* format, ...) {
 void Logger::insert_log(logType type, const String& msg) {
     // verify the mutex is created and try to take it before inserting the log, 
     // to ensure thread safety when multiple tasks are inserting logs concurrently
-    //if (!wait_for_mutex()) return;
+    if (!wait_for_mutex()) return;
 
     // convert the string to send as bytes
     const uint8_t* data = reinterpret_cast<const uint8_t*>(const_cast<char*>(msg.c_str()));
 
     // insert the log message into the buffer, using the current timestamp in milliseconds for the log entry
     insert_log_impl(data, msg.length(), type, millis());
-    //free_mutex();
+    free_mutex();
 }
 
 uint8_t Logger::calculate_checksum(const message& msg) {

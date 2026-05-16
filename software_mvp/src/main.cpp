@@ -30,6 +30,7 @@ void setup() {
     // init the tasks, passing the kyno pointer as a parameter
     startTask01(kynowave_ptr, CORE_0); // warning, this core is used to wifi and bluetooth too
     startTask02(kynowave_ptr, CORE_1);
+    Serial.println("Tasks started successfully!");
 
     // saves the free memory
     kynowave.logger.insert_logf(logType::DEBG, "Free heap: %0.2f KB",       (float)esp_get_free_heap_size() / 1024);

@@ -18,10 +18,8 @@ void Task02Code(void * pvParameters) {
 
     while (true) {
         if (KynoWave::readFromSerial(command)) {
-            Serial.println("Received command: " + command);
             // kynowave.logger.insert_logf(logType::ERRO, "Error processing command: %s", command);
-            string result = kynowave->shell.run_command_line(command.c_str()).c_str();
-            kynowave->logger.insert_logf(logType::CMDO, result.c_str());
+            uint8_t result = kynowave->shell.run_command_line(command.c_str());
         }
 
         vTaskDelay(pdMS_TO_TICKS(1)); 

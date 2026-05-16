@@ -34,15 +34,13 @@ bool KynoWave::readFromSerial(String& input) {
     return true;
 }
 
-uint8_t ping() {
-    Serial.println("pong...");
+uint8_t ping(int number) {
+    Serial.printf("human -pong %d\n", number);
     return RESULT_OK;  // return 0 to indicate success
 }
 
-// wrapper functions to be used in the shell
-uint8_t KynoWave::wrapper_h() {
-    instante_->logger.insert_log(logType::INFO, KynoWave::instante_->shell.get_help("").c_str());
-    return RESULT_OK;  // return 0 to indicate success
+void print_output(const string& output) {
+    Serial.println(output.c_str());
 }
 
 void KynoWave::begin() {
@@ -54,12 +52,11 @@ void KynoWave::begin() {
     logger.set_send_callback(KynoWave::sendToSerial);
     logger.begin();
 
+    // setup the shell input callback    
+    shell.begin();
+    shell.set_output_callback(print_output);
+
     // setup the shell
     shell.create_module("kyno", "KynoWave main module");
-    shell.create_module("help", "ajuda e informacoes");
-
     shell.add(ping, "ping", "Ping the KynoWave to check if it's alive", "kyno");
-
-    // add the wrapper functions to the help module
-    shell.add(KynoWave::wrapper_h, "h", "Lista os modulos", "help");
 }

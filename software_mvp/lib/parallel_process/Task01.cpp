@@ -18,7 +18,7 @@ void Task01Code(void * pvParameters) {
         kynowave->logger.send_live_logger();
 
         // delay de 1 ms para evitar que a task consuma 100% do CPU
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
