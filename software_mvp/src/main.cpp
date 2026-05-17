@@ -12,7 +12,7 @@
 
 // header
 #include <Settings.h>
-#include <OTA.h>
+#include <OTA_connection.h>
 
 // create the instance of the kynowave class, to use the static members
 KynoWave kynowave;
@@ -21,15 +21,21 @@ void setup() {
     // set the send callback of the logger to the function that will print the messages to the serial
     kynowave.begin();
 
-    // init the tasks, passing the kyno pointer as a parameter
+    // init the tasks 01 to print the logs 
     startTask01(kynowave.getInstance(), CORE_0); // warning, this core is used to wifi and bluetooth too
-    startTask02(kynowave.getInstance(), CORE_1);
 
     // saves the free memory
     kynowave.logger.insert_logf(logType::DEBG, "Free heap: %0.2f KB",       (float)esp_get_free_heap_size() / 1024);
 
+    // connect to WiFi and MQTT
+    kynowave.connectToWiFi();
+    kynowave.setup_MQTT();
+
     // setup the OTA update, this will allow us to update the firmware over the air, without needing to connect the device to the computer
-    setup_ota(kynowave);
+    setup_OTA(kynowave);
+
+    // init the tasks 02 to handle the OTA updates, MQTT and the shell commands
+    startTask02(kynowave.getInstance(), CORE_1);
 }
 
 void loop() {

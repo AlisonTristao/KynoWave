@@ -24,13 +24,16 @@ void Task02Code(void * pvParameters) {
         // check OTA updates
         ArduinoOTA.handle();
 
+        // check MQTT 
+        kynowave->MQTT_handle();
+
         // check for serial input and run the command in the shell if there is any, 
         // this allows us to interact with the shell from the serial monitor while the tasks are running
         if (!KynoWave::readFromSerial(command))
             continue;
             
         // run the command in the shell and get the result code
-        kynowave->logger.insert_log(logType::DEBG, command.c_str());
+        kynowave->logger.insert_log(logType::CMDO, command.c_str());
         uint8_t result = kynowave->shell.run_command_line(command.c_str());
 
         // if return some error, make something...

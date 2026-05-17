@@ -4,6 +4,8 @@
 // external libraries
 #include <Arduino.h>
 #include <TinyShell.h>
+#include <PubSubClient.h>
+#include <WiFi.h>
 
 // internal libraries
 #include <Logger.h>
@@ -21,6 +23,9 @@ class KynoWave {
         KynoWave() {
             if (instante_ == nullptr)
                 instante_ = this;
+            
+            // initialize the MQTT client with the WiFi client
+            clientMQTT.setClient(espClient);
         };
 
         void begin();
@@ -29,6 +34,8 @@ class KynoWave {
         Logger logger;
         TinyShell shell;
         DisplayLCD display;
+        WiFiClient espClient;
+        PubSubClient clientMQTT;
 
         /*
         * @brief Default output callback, 
@@ -47,6 +54,16 @@ class KynoWave {
         static bool readFromSerial(String& input);
 
         /**
+         * @brief default output callback for MQTT,
+         * This function will publish the log messages to a MQTT broker, using the PubSubClient
+         * 
+         * @param data Pointer to the log message data, which is expected to be a pointer to a message struct.
+         * @param len Length of the data in bytes, which should be equal to the size of the message struct.
+         * @return true if the message was published successfully, false otherwise (e.g., if
+         */
+        static bool sendToMQTT(const uint8_t *data, size_t len);
+
+        /**
         * @brief return a void pointer to the instance of the Kyno
         * 
         * @return void pointer to the instance of the KynoWave class, this can be used to access the logger and shell from the tasks
@@ -55,12 +72,39 @@ class KynoWave {
             return static_cast<void*>(instante_);
         }
 
+        /**
+         * @brief Handle MQTT communication
+         */
+        void MQTT_handle();
+        
+        /**
+         * @brief Setup the MQTT connection, this will connect to the WiFi and then to the MQTT broker, and set the callback for incoming messages
+         */
+        void setup_MQTT();
+
+        /**
+         * @brief Connect to the Wi-Fi network
+         */
+        void connectToWiFi();
+
     private:
         // static instance of the KynoWave class, this will be used to access the logger and shell from the tasks
         static KynoWave* instante_;
 
         // wrapper functions to be used in the shell
         static uint8_t wrapper_h();         // explain the available modules and commands
+
+        const char* mqtt_server = "192.168.0.100";
+        const int mqtt_port = 1883;
+        const char* mqtt_topic = "kynowave/logs";
+        const char* ssid = "ole telecom.129246";
+        const char* password = "474726264h";
+        const String clientId = "KynoWaveMVP_01";
+
+        /**
+         * @brief Reconnect to the MQTT broker
+         */
+        void reconnect();
 };  
 
 #endif // KYNOWAVE_H

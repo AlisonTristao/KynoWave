@@ -6,9 +6,6 @@
 // internal libraries
 #include <KynoWave.h>
 
-const char* ssid = "ole telecom.129246";
-const char* password = "474726264h";
-
 // global pointer to the kynowave instance, to use it in the OTA callbacks
 KynoWave* ptr_kynowave = nullptr;
 
@@ -64,32 +61,12 @@ void onOtaError(ota_error_t error) {
     }
 }
 
-void setup_ota(KynoWave& kynowave) {
+void setup_OTA(KynoWave& kynowave) {
     // save the global pointer to the kynowave instance, to use it in the OTA callbacks
     ptr_kynowave = &kynowave;
 
-    // wifi connection
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-
-    const uint8_t max_attempts = 5; 
-    bool success = false;
-    
-    kynowave.logger.insert_logf(logType::INFO, "Connecting to Wi-Fi: %s", ssid);
-
-    for (uint8_t attempts = 0; attempts < max_attempts; ++attempts) {
-        if (WiFi.waitForConnectResult() == WL_CONNECTED) {
-            success = true;
-            break; 
-        }
-        kynowave.logger.insert_log(logType::INFO, "Failed to connect to Wi-Fi! Trying again...");
-        delay(1000);
-    }
-
-    if (!success) {
-        kynowave.logger.insert_log(logType::INFO, "Failed to connect to Wi-Fi!");
-        return; 
-    }
+    // log the OTA setup start
+    kynowave.logger.insert_log(logType::INFO, "Setting up OTA...");
 
     // setup the OTA service
     ArduinoOTA.setHostname("KynoWave"); 
@@ -103,7 +80,5 @@ void setup_ota(KynoWave& kynowave) {
 
     // start the OTA service
     ArduinoOTA.begin();
-
     kynowave.logger.insert_log(logType::INFO, "OTA finished!");
-    kynowave.logger.insert_logf(logType::INFO, "IP Address: %s", WiFi.localIP().toString().c_str());
 }
