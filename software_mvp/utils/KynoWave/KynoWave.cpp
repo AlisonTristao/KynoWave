@@ -17,11 +17,17 @@ bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
 
     if (msg->type == logType::I2SD) {
         size_t num_samples = msg->content.size / sizeof(int16_t);
-        for (size_t i = 0; i < num_samples; ++i)
+        for (size_t i = 0; i < num_samples; ++i) {
             Serial.printf("%d ", msg->content.i2sD[i]);
+            instante_->display.printWrap(String(msg->content.i2sD[i]) + " ");
+        }
         Serial.print("\n");
-    } else
+        instante_->display.printWrap("\n");
+    } else {
         Serial.printf("%s\n", msg->content.text);
+        instante_->display.printWrap(String(msg->content.text));
+        instante_->display.printWrap("\n");
+    }
     return true;
 }
 
@@ -39,10 +45,6 @@ uint8_t ping(int number) {
     return RESULT_OK;  // return 0 to indicate success
 }
 
-void print_output(const string& output) {
-    Serial.println(output.c_str());
-}
-
 void KynoWave::begin() {
     // init the serial communication and print a log message to indicate that the serial is initialized
     Serial.begin(BAUDRATE);
@@ -54,7 +56,12 @@ void KynoWave::begin() {
 
     // setup the shell input callback    
     shell.begin();
-    shell.set_output_callback(print_output);
+    shell.set_output_callback([](const std::string& text) {
+        instante_->logger.insert_logf(logType::DEBG, "Shell output: %s", text.c_str());
+    });
+
+    // setup the display
+    display.begin();
 
     // setup the shell
     shell.create_module("kyno", "KynoWave main module");

@@ -7,6 +7,7 @@
 
 // internal libraries
 #include <Logger.h>
+#include <DisplayLCD.h>
 
 // define a baud rate for the serial communication
 #ifndef BAUDRATE
@@ -27,6 +28,7 @@ class KynoWave {
         // members
         Logger logger;
         TinyShell shell;
+        DisplayLCD display;
 
         /*
         * @brief Default output callback, 

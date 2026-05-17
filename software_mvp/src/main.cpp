@@ -1,8 +1,9 @@
 // external libraries
 #include <Arduino.h>
-#include <esp_heap_caps.h>
-#include <esp_system.h>
-#include <TinyShell.h>
+#include <esp_heap_caps.h>  // for checking the free heap memory in the setup function
+#include <esp_system.h>     // for checking the free heap memory in the setup function
+#include <TinyShell.h>      // for the shell
+#include <Logger.h>         // for the logger
 
 // internal libraries7
 #include <KynoWave.h>
@@ -25,8 +26,6 @@ void setup() {
 
     // saves the free memory
     kynowave.logger.insert_logf(logType::DEBG, "Free heap: %0.2f KB",       (float)esp_get_free_heap_size() / 1024);
-    kynowave.logger.insert_logf(logType::DEBG, "Free 8bit heap: %0.2f KB",  (float)heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024);
-    kynowave.logger.insert_logf(logType::DEBG, "Free psram: %0.2f KB",      (float)heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024);
 }
 
 void loop() {

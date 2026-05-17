@@ -23,10 +23,10 @@ void Logger::begin() {
     // add 4 logs
     // the max packet size, the max message size, the protocol overhead size and the max messages
     insert_log(logType::INFO, "Logger initialized.");
-    insert_log(logType::INFO, "Max packet message size: "   + String(MAX_PACKET_SIZE) + " bytes.");
+    insert_log(logType::INFO, "Max packet size: "           + String(MAX_PACKET_SIZE) + " bytes.");
     insert_log(logType::INFO, "Max message size: "          + String(MAX_CONTENT_SIZE) + " bytes.");
-    insert_log(logType::INFO, "Protocol overhead size: "    + String(PROTOCOL_OVERHEAD_SIZE) + " bytes.");
-    insert_log(logType::INFO, "Max messages in buffer: "    + String(MAX_PACKETS_IN_RAM) + ".");
+    insert_log(logType::INFO, "Overhead size: "             + String(PROTOCOL_OVERHEAD_SIZE) + " bytes.");
+    insert_log(logType::INFO, "Buffer size: "               + String(MAX_PACKETS_IN_RAM) + ".");
 }
 
 bool Logger::wait_for_mutex() {

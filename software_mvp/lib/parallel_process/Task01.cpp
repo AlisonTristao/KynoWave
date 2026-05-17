@@ -11,7 +11,7 @@ void Task01Code(void * pvParameters) {
     KynoWave* kynowave = static_cast<KynoWave*>(pvParameters);
     
     // add a log message to indicate that the task is running and the core it is running on
-    kynowave->logger.insert_logf(logType::INFO, "Task 1 iniciada no core %u", xPortGetCoreID());
+    kynowave->logger.insert_logf(logType::INFO, "Task 1 running on core %u", xPortGetCoreID());
 
     while (true) {
         // delay de 1 ms para evitar que a task consuma 100% do CPU

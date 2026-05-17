@@ -11,7 +11,7 @@ void Task02Code(void * pvParameters) {
     KynoWave* kynowave = static_cast<KynoWave*>(pvParameters);
     
     // add a log message to indicate that the task is running and the core it is running on
-    kynowave->logger.insert_logf(logType::INFO, "Task 2 iniciada no core %u", xPortGetCoreID());
+    kynowave->logger.insert_logf(logType::INFO, "Task 2 running on core %u", xPortGetCoreID());
     
     // string to receive the serial commands
     String command;
@@ -26,11 +26,12 @@ void Task02Code(void * pvParameters) {
             continue;
             
         // run the command in the shell and get the result code
+        kynowave->logger.insert_log(logType::DEBG, command.c_str());
         uint8_t result = kynowave->shell.run_command_line(command.c_str());
 
         // if return some error, make something...
         if (result != RESULT_OK)
-            kynowave->logger.insert_logf(logType::ERRO, "Error running command: %s, result code: %u", command.c_str(), result);
+            kynowave->logger.insert_logf(logType::ERRO, "Error: %d", result);
     }
 }
 
