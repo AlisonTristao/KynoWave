@@ -41,7 +41,7 @@ bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
 
     // parse the message struct from the raw data
     const message* msg = reinterpret_cast<const message*>(data);
-    String topic = "kynowave/device_01/";
+    String topic = "kynowave/device_01";
     
     if (msg->type == logType::I2SD) topic += "i2s_data";    
     else                            topic += "status_logs"; 
