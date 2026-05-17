@@ -25,8 +25,7 @@ bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
         instante_->display.printWrap("\n");
     } else {
         Serial.printf("%s\n", msg->content.text);
-        instante_->display.printWrap(String(msg->content.text));
-        instante_->display.printWrap("\n");
+        instante_->display.printWrap(String(msg->content.text) + "\n");
     }
     return true;
 }

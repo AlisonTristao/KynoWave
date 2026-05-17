@@ -12,6 +12,7 @@
 
 // header
 #include <Settings.h>
+#include <OTA.h>
 
 // create the instance of the kynowave class, to use the static members
 KynoWave kynowave;
@@ -26,6 +27,9 @@ void setup() {
 
     // saves the free memory
     kynowave.logger.insert_logf(logType::DEBG, "Free heap: %0.2f KB",       (float)esp_get_free_heap_size() / 1024);
+
+    // setup the OTA update, this will allow us to update the firmware over the air, without needing to connect the device to the computer
+    setup_ota(kynowave);
 }
 
 void loop() {

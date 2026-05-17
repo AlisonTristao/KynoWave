@@ -1,6 +1,7 @@
 #include "Task01.h"
 #include <KynoWave.h>
 #include <Settings.h>
+#include <ArduinoOTA.h>
 
 // handler para a task que rodará no núcleo 0
 TaskHandle_t handleTask0 = NULL;
@@ -19,6 +20,9 @@ void Task02Code(void * pvParameters) {
     while (true) {
         // delay to avoid consuming too much CPU time...
         vTaskDelay(pdMS_TO_TICKS(1)); 
+
+        // check OTA updates
+        ArduinoOTA.handle();
 
         // check for serial input and run the command in the shell if there is any, 
         // this allows us to interact with the shell from the serial monitor while the tasks are running

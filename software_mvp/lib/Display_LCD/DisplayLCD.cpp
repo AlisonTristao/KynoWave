@@ -41,11 +41,12 @@ void DisplayLCD::printWrap(const String& text) {
     
     // if the Y position is greater than or equal to 120, clear the screen and reset the cursor to (0,0)
     if (posicaoY >= 120) { 
-        tft.fillScreen(ST7735_BLACK); 
+        tft.fillScreen(bg_color); 
         tft.setCursor(0, 0);          
     }
     
     // print the text on the display, it will automatically wrap to the next line if it exceeds the width of the screen
     tft.print(text);
 }
+
 
