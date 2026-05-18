@@ -1,0 +1,48 @@
+#ifndef DEVICE_HUB_H
+#define DEVICE_HUB_H
+
+#include <Arduino.h>
+
+#ifndef DEVICE_HUB_MAX_OUTPUTS
+#define DEVICE_HUB_MAX_OUTPUTS 4
+#endif
+
+#ifndef DEVICE_HUB_MAX_INPUTS
+#define DEVICE_HUB_MAX_INPUTS 4
+#endif
+
+class IOutputSink {
+public:
+    virtual ~IOutputSink() = default;
+    virtual bool send(const uint8_t* data, size_t len) = 0;
+};
+
+class IInputSource {
+public:
+    virtual ~IInputSource() = default;
+    virtual bool read(String& out) = 0;
+};
+
+class DeviceHub {
+public:
+    DeviceHub();
+
+    bool addOutput(IOutputSink* sink, const char* name);
+    bool addInput(IInputSource* source, const char* name);
+
+    bool sendToAll(const uint8_t* data, size_t len);
+    bool readAny(String& out, uint8_t* source_index = nullptr);
+
+    const char* inputName(uint8_t index) const;
+
+private:
+    IOutputSink* outputs_[DEVICE_HUB_MAX_OUTPUTS];
+    const char* output_names_[DEVICE_HUB_MAX_OUTPUTS];
+    uint8_t output_count_;
+
+    IInputSource* inputs_[DEVICE_HUB_MAX_INPUTS];
+    const char* input_names_[DEVICE_HUB_MAX_INPUTS];
+    uint8_t input_count_;
+};
+
+#endif // DEVICE_HUB_H

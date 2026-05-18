@@ -29,7 +29,7 @@ class DisplayLCD {
         const uint16_t text_color   = ST7735_GREEN;     // colot with matrix estile
         const uint16_t bg_color     = ST7735_BLACK;     // background color
         const uint8_t rotation      = 3;                // horizontal rotation (0-3)
-        const uint8_t font_offset   = 12;                // offset in pixels to move the text down, to avoid overlapping with the top of the screen
+        const uint8_t font_offset   = 6;                // offset in pixels to move the text down, to avoid overlapping with the top of the screen
 };
 
 

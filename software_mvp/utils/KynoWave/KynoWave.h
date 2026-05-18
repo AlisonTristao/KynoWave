@@ -10,6 +10,8 @@
 // internal libraries
 #include <Logger.h>
 #include <DisplayLCD.h>
+#include <DeviceHub.h>
+#include <OTA_connection.h>
 
 // define a baud rate for the serial communication
 #ifndef BAUDRATE
@@ -20,13 +22,7 @@
 
 class KynoWave {
     public:
-        KynoWave() {
-            if (instante_ == nullptr)
-                instante_ = this;
-            
-            // initialize the MQTT client with the WiFi client
-            clientMQTT.setClient(espClient);
-        };
+        KynoWave();
 
         void begin();
 
@@ -53,6 +49,11 @@ class KynoWave {
         */
         static bool readFromSerial(String& input);
 
+        /*
+        * @brief Default output callback for the device hub
+        */
+        static bool sendToHub(const uint8_t *data, size_t len);
+
         /**
          * @brief default output callback for MQTT,
          * This function will publish the log messages to a MQTT broker, using the PubSubClient
@@ -73,14 +74,17 @@ class KynoWave {
         }
 
         /**
+         * @brief Exceute the Kyno routines to handle the MQTT communication, 
+         * this should be called in the main loop or in a task to keep the MQTT connection alive and handle incoming messages.
+         * 
+         */
+
+        void routine();
+
+        /**
          * @brief Handle MQTT communication
          */
         void MQTT_handle();
-        
-        /**
-         * @brief Setup the MQTT connection, this will connect to the WiFi and then to the MQTT broker, and set the callback for incoming messages
-         */
-        void setup_MQTT();
 
         /**
          * @brief Connect to the Wi-Fi network
@@ -88,6 +92,47 @@ class KynoWave {
         void connectToWiFi();
 
     private:
+        // device adapters
+        class SerialSink : public IOutputSink {
+        public:
+            explicit SerialSink(KynoWave& k) : k_(k) {}
+            bool send(const uint8_t* data, size_t len) override;
+        private:
+            KynoWave& k_;
+        };
+
+        class DisplaySink : public IOutputSink {
+        public:
+            explicit DisplaySink(KynoWave& k) : k_(k) {}
+            bool send(const uint8_t* data, size_t len) override;
+        private:
+            KynoWave& k_;
+        };
+
+        class MqttSink : public IOutputSink {
+        public:
+            explicit MqttSink(KynoWave& k) : k_(k) {}
+            bool send(const uint8_t* data, size_t len) override;
+        private:
+            KynoWave& k_;
+        };
+
+        class SerialSource : public IInputSource {
+        public:
+            explicit SerialSource(KynoWave& k) : k_(k) {}
+            bool read(String& out) override;
+        private:
+            KynoWave& k_;
+        };
+
+        class MqttSource : public IInputSource {
+        public:
+            explicit MqttSource(KynoWave& k) : k_(k) {}
+            bool read(String& out) override;
+        private:
+            KynoWave& k_;
+        };
+
         // static instance of the KynoWave class, this will be used to access the logger and shell from the tasks
         static KynoWave* instante_;
 
@@ -97,9 +142,25 @@ class KynoWave {
         const char* mqtt_server = "192.168.0.100";
         const int mqtt_port = 1883;
         const char* mqtt_topic = "kynowave/logs";
+        const char* mqtt_cmd_topic = "kynowave/cmd";
         const char* ssid = "ole telecom.129246";
         const char* password = "474726264h";
         const String clientId = "KynoWaveMVP_01";
+
+        OTAConnection ota;
+        DeviceHub hub;
+        SerialSink serial_sink;
+        DisplaySink display_sink;
+        MqttSink mqtt_sink;
+        SerialSource serial_source;
+        MqttSource mqtt_source;
+
+        bool mqtt_cmd_pending_ = false;
+        String mqtt_cmd_buffer_;
+
+        static void mqttCallback(char* topic, uint8_t* payload, unsigned int length);
+        void onMqttMessage(const char* topic, const uint8_t* payload, unsigned int length);
+        bool readFromMqtt(String& input);
 
         /**
          * @brief Reconnect to the MQTT broker

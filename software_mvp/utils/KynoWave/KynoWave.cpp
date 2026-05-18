@@ -1,11 +1,25 @@
 #include "KynoWave.h"
 #include <PubSubClient.h>
+#include <cstring>
 
 // initialize the static members of the KynoWave class
 KynoWave* KynoWave::instante_ = nullptr;
 
-bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
-    KynoWave::sendToMQTT(data, len); // also send the log to MQTT
+KynoWave::KynoWave()
+    : hub(),
+      serial_sink(*this),
+      display_sink(*this),
+      mqtt_sink(*this),
+      serial_source(*this),
+      mqtt_source(*this) {
+    if (instante_ == nullptr)
+        instante_ = this;
+
+    // initialize the MQTT client with the WiFi client
+    clientMQTT.setClient(espClient);
+}
+
+bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
     if (data == nullptr || len == 0) return false;
 
     const message* msg = reinterpret_cast<const message*>(data);
@@ -21,19 +35,50 @@ bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
         size_t num_samples = msg->content.size / sizeof(int16_t);
         for (size_t i = 0; i < num_samples; ++i) {
             Serial.printf("%d ", msg->content.i2sD[i]);
-            instante_->display.printWrap(String(msg->content.i2sD[i]) + " ");
         }
         Serial.print("\n");
-        instante_->display.printWrap("\n");
     } else {
         Serial.printf("%s\n", msg->content.text);
-        instante_->display.printWrap(String(msg->content.text) + "\n");
     }
     return true;
 }
 
-bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
-    if (data == nullptr || len == 0) return false;
+    bool KynoWave::DisplaySink::send(const uint8_t* data, size_t len) {
+        if (data == nullptr || len == 0) return false;
+
+        const message* msg = reinterpret_cast<const message*>(data);
+        if (msg->type == logType::I2SD) {
+            size_t num_samples = msg->content.size / sizeof(int16_t);
+            for (size_t i = 0; i < num_samples; ++i) {
+                k_.display.printWrap(String(msg->content.i2sD[i]) + " ");
+            }
+            k_.display.printWrap("\n");
+        } else {
+            k_.display.printWrap(String(msg->content.text) + "\n");
+        }
+        return true;
+    }
+
+    bool KynoWave::MqttSink::send(const uint8_t* data, size_t len) {
+        return KynoWave::sendToMQTT(data, len);
+    }
+
+    bool KynoWave::SerialSource::read(String& out) {
+        return KynoWave::readFromSerial(out);
+    }
+
+    bool KynoWave::MqttSource::read(String& out) {
+        return k_.readFromMqtt(out);
+    }
+
+    bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
+        if (instante_ == nullptr) return false;
+        return instante_->serial_sink.send(data, len);
+    }
+
+    bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
+        if (data == nullptr || len == 0) return false;
+        if (instante_ == nullptr) return false;
 
     //  verify MQTT connection before trying to publish
     if (!instante_->clientMQTT.connected()) 
@@ -41,10 +86,10 @@ bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
 
     // parse the message struct from the raw data
     const message* msg = reinterpret_cast<const message*>(data);
-    String topic = "kynowave/device_01";
+        String topic = String(instante_->mqtt_topic);
     
-    if (msg->type == logType::I2SD) topic += "i2s_data";    
-    else                            topic += "status_logs"; 
+        if (msg->type == logType::I2SD) topic += "/i2s_data";    
+        else                            topic += "/status_logs"; 
     return instante_->clientMQTT.publish(topic.c_str(), data, static_cast<unsigned int>(len));
 }
 
@@ -65,11 +110,18 @@ uint8_t ping(int number) {
 void KynoWave::begin() {
     // init the serial communication and print a log message to indicate that the serial is initialized
     Serial.begin(BAUDRATE);
-    logger.insert_logf(logType::INFO, "Serial initialized at baud: %u", BAUDRATE);
 
     // setup the logger
     logger.begin();
-    logger.set_send_callback(KynoWave::sendToSerial);
+    logger.set_send_callback(KynoWave::sendToHub);
+    logger.insert_logf(logType::INFO, "Serial initialized at baud: %u", BAUDRATE);
+
+    // setup device hub
+    hub.addOutput(&serial_sink, "serial");
+    hub.addOutput(&mqtt_sink, "mqtt");
+    hub.addOutput(&display_sink, "display");
+    hub.addInput(&serial_source, "serial");
+    hub.addInput(&mqtt_source, "mqtt");
 
     // setup the shell input callback    
     shell.begin();
@@ -83,18 +135,20 @@ void KynoWave::begin() {
     // setup the shell
     shell.create_module("kyno", "KynoWave main module");
     shell.add(ping, "ping", "Ping the KynoWave to check if it's alive", "kyno");
+
+    // setup the MQTT client
+    clientMQTT.setServer(mqtt_server, mqtt_port);
+    clientMQTT.setBufferSize(256);
+    clientMQTT.setCallback(KynoWave::mqttCallback);
+
+    // setup OTA
+    ota.begin(logger, display);
 }
 
 void KynoWave::MQTT_handle() {
     if (!clientMQTT.connected())
         reconnect();
     clientMQTT.loop();
-}
-
-void KynoWave::setup_MQTT() {
-    clientMQTT.setServer(mqtt_server, mqtt_port);
-    clientMQTT.setBufferSize(256);
-    reconnect();
 }
 
 void KynoWave::reconnect() {
@@ -104,6 +158,7 @@ void KynoWave::reconnect() {
         
         if (clientMQTT.connect(clientId.c_str())) {
             logger.insert_logf(logType::INFO, "Connected to Broker: %s", mqtt_server);
+            clientMQTT.subscribe(mqtt_cmd_topic);
         } else {
             logger.insert_logf(logType::INFO, "Failed, rc=%d", clientMQTT.state());
             logger.insert_log(logType::INFO, ". Trying again in 5 seconds...");
@@ -133,9 +188,70 @@ void KynoWave::connectToWiFi() {
 
     if (!success) {
         logger.insert_log(logType::INFO, "Failed to connect to Wi-Fi!");
-        return; 
     } else {
         logger.insert_log(logType::INFO, "Connected to Wi-Fi!");
         logger.insert_logf(logType::INFO, "IP address: %s", WiFi.localIP().toString().c_str());
     }
+}
+
+void KynoWave::routine() {
+    // handle OTA
+    ota.handle();
+
+    // check MQTT 
+    MQTT_handle();
+
+    // check for serial input and run the command in the shell if there is any, 
+    // this allows us to interact with the shell from the serial monitor while the tasks are running
+    String command;
+    uint8_t source_index = 0;
+    if (!hub.readAny(command, &source_index))
+        return;
+        
+    // run the command in the shell and get the result code
+    const char* source_name = hub.inputName(source_index);
+    if (source_name == nullptr) source_name = "unknown";
+    logger.insert_logf(logType::CMDO, "cmd from %s: %s", source_name, command.c_str());
+    uint8_t result = shell.run_command_line(command.c_str());
+
+    // if return some error, make something...
+    if (result != RESULT_OK)
+        logger.insert_logf(logType::ERRO, "Error code: %d", result);
+}
+
+bool KynoWave::sendToHub(const uint8_t *data, size_t len) {
+    if (instante_ == nullptr) return false;
+    return instante_->hub.sendToAll(data, len);
+}
+
+void KynoWave::mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
+    if (instante_ == nullptr) return;
+    instante_->onMqttMessage(topic, payload, length);
+}
+
+void KynoWave::onMqttMessage(const char* topic, const uint8_t* payload, unsigned int length) {
+    if (topic == nullptr || payload == nullptr || length == 0)
+        return;
+
+    if (strcmp(topic, mqtt_cmd_topic) != 0)
+        return;
+
+    const unsigned int max_len = 255;
+    unsigned int copy_len = (length > max_len) ? max_len : length;
+    char buffer[max_len + 1];
+    memcpy(buffer, payload, copy_len);
+    buffer[copy_len] = '\0';
+
+    mqtt_cmd_buffer_ = String(buffer);
+    mqtt_cmd_pending_ = true;
+}
+
+bool KynoWave::readFromMqtt(String& input) {
+    if (!mqtt_cmd_pending_)
+        return false;
+
+    input = mqtt_cmd_buffer_;
+    mqtt_cmd_buffer_ = "";
+    mqtt_cmd_pending_ = false;
+    return true;
 }

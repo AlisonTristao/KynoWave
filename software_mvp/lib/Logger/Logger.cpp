@@ -1,8 +1,8 @@
 #include <Logger.h>
 
 Logger::Logger()
-    : send_callback_(defaultSendCallback){
-    mutex_ = xSemaphoreCreateMutex();
+    : send_callback_(defaultSendCallback) {
+    mutex_ = nullptr;
 }
 
 Logger::~Logger() {
@@ -18,7 +18,8 @@ void Logger::begin() {
     initialized_ = true;
 
     // create the mutex for the logger to ensure thread safety when multiple tasks are inserting logs concurrently
-    mutex_ = xSemaphoreCreateMutex();
+    if (mutex_ == nullptr)
+        mutex_ = xSemaphoreCreateMutex();
 
     // add 4 logs
     // the max packet size, the max message size, the protocol overhead size and the max messages
@@ -34,7 +35,6 @@ bool Logger::wait_for_mutex() {
     // insert a debug to indicate 
     //insert_log(logType::DEBG, "Waiting for mutex...");
     return xSemaphoreTake(mutex_, portMAX_DELAY) == pdTRUE;
-    return true;
 }
 
 void Logger::free_mutex() {
@@ -145,8 +145,10 @@ void Logger::insert_log_impl(const uint8_t* data, size_t len, logType type, uint
         const uint16_t remaining  = (start < len) ? (len - start) : 0; // remaining characters to send starting from the current packet's start index
         const size_t length       = (remaining > MAX_CONTENT_SIZE) ? MAX_CONTENT_SIZE : remaining;    // length of the substring for the current packet
 
-        if (message_count >= MAX_PACKETS_IN_RAM)
+        if (message_count >= MAX_PACKETS_IN_RAM) {
             message_count = 0;
+            last_index = 0; // drop old data to avoid re-sending stale messages
+        }
 
         message& m          = messages[message_count++];
         m.timer             = ts;

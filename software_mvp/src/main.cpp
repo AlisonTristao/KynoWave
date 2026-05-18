@@ -12,7 +12,6 @@
 
 // header
 #include <Settings.h>
-#include <OTA_connection.h>
 
 // create the instance of the kynowave class, to use the static members
 KynoWave kynowave;
@@ -29,10 +28,6 @@ void setup() {
 
     // connect to WiFi and MQTT
     kynowave.connectToWiFi();
-    kynowave.setup_MQTT();
-
-    // setup the OTA update, this will allow us to update the firmware over the air, without needing to connect the device to the computer
-    setup_OTA(kynowave);
 
     // init the tasks 02 to handle the OTA updates, MQTT and the shell commands
     startTask02(kynowave.getInstance(), CORE_1);
