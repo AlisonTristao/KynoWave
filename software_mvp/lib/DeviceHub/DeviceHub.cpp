@@ -3,10 +3,12 @@
 DeviceHub::DeviceHub()
     : output_count_(0),
       input_count_(0) {
+    // initialize output slots
     for (uint8_t i = 0; i < DEVICE_HUB_MAX_OUTPUTS; ++i) {
         outputs_[i] = nullptr;
         output_names_[i] = nullptr;
     }
+    // initialize input slots
     for (uint8_t i = 0; i < DEVICE_HUB_MAX_INPUTS; ++i) {
         inputs_[i] = nullptr;
         input_names_[i] = nullptr;
@@ -35,6 +37,7 @@ bool DeviceHub::addInput(IInputSource* source, const char* name) {
 
 bool DeviceHub::sendToAll(const uint8_t* data, size_t len) {
     bool ok = true;
+    // send the payload to all registered outputs
     for (uint8_t i = 0; i < output_count_; ++i) {
         if (outputs_[i] == nullptr)
             continue;
@@ -45,6 +48,7 @@ bool DeviceHub::sendToAll(const uint8_t* data, size_t len) {
 }
 
 bool DeviceHub::readAny(String& out, uint8_t* source_index) {
+    // return the first input that has data available
     for (uint8_t i = 0; i < input_count_; ++i) {
         if (inputs_[i] == nullptr)
             continue;

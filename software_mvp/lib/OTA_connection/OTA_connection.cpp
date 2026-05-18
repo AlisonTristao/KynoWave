@@ -6,6 +6,17 @@
 #include <ArduinoOTA.h>
 #include <WiFi.h>
 
+// ota settings
+#ifndef OTA_HOSTNAME
+#define OTA_HOSTNAME "KynoWave"
+#warning "OTA_HOSTNAME is not defined in platformio.ini, using default: KynoWave"
+#endif
+
+#ifndef OTA_PASSWORD
+#define OTA_PASSWORD "657585"
+#warning "OTA_PASSWORD is not defined in platformio.ini, using default: 657585"
+#endif
+
 OTAConnection* OTAConnection::instance_ = nullptr;
 
 OTAConnection::OTAConnection()
@@ -15,16 +26,20 @@ OTAConnection::OTAConnection()
       last_percentage_(255) {}
 
 void OTAConnection::begin(Logger& logger, DisplayLCD& display) {
+    // save the references used by OTA callbacks
     logger_ = &logger;
     display_ = &display;
     instance_ = this;
     last_percentage_ = 255;
 
+    // log the OTA setup start
     logger_->insert_log(logType::INFO, "Setting up OTA...");
 
-    ArduinoOTA.setHostname("KynoWave");
-    ArduinoOTA.setPassword("657585");
+    // setup the OTA service
+    ArduinoOTA.setHostname(OTA_HOSTNAME);
+    ArduinoOTA.setPassword(OTA_PASSWORD);
 
+    // define callbacks for OTA events
     ArduinoOTA.onStart([]() {
         if (instance_) instance_->onStart();
     });
@@ -42,6 +57,7 @@ void OTAConnection::begin(Logger& logger, DisplayLCD& display) {
 }
 
 void OTAConnection::handle() {
+    // ensure OTA is started once Wi-Fi is ready
     startIfReady();
     if (started_)
         ArduinoOTA.handle();
@@ -54,6 +70,7 @@ void OTAConnection::startIfReady() {
     if (WiFi.status() != WL_CONNECTED)
         return;
 
+    // start OTA only after Wi-Fi is connected
     ArduinoOTA.begin();
     started_ = true;
     logger_->insert_log(logType::INFO, "OTA finished!");

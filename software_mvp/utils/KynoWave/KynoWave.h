@@ -20,6 +20,38 @@
 #warning "BAUDRATE is not defined in platformio.ini, using default baud rate: 115200"
 #endif
 
+// wifi settings
+#ifndef WIFI_SSID
+#define WIFI_SSID "your_ssid"
+#warning "WIFI_SSID is not defined in platformio.ini, using default: your_ssid"
+#endif
+
+#ifndef WIFI_PASSWORD
+#define WIFI_PASSWORD "your_password"
+#warning "WIFI_PASSWORD is not defined in platformio.ini, using default: your_password"
+#endif
+
+// mqtt settings
+#ifndef MQTT_SERVER
+#define MQTT_SERVER "192.168.0.100"
+#warning "MQTT_SERVER is not defined in platformio.ini, using default: 192.168.0.100"
+#endif
+
+#ifndef MQTT_PORT
+#define MQTT_PORT 1883
+#warning "MQTT_PORT is not defined in platformio.ini, using default: 1883"
+#endif
+
+#ifndef MQTT_TOPIC
+#define MQTT_TOPIC "kynowave/logs"
+#warning "MQTT_TOPIC is not defined in platformio.ini, using default: kynowave/logs"
+#endif
+
+#ifndef MQTT_CMD_TOPIC
+#define MQTT_CMD_TOPIC "kynowave/cmd"
+#warning "MQTT_CMD_TOPIC is not defined in platformio.ini, using default: kynowave/cmd"
+#endif
+
 class KynoWave {
     public:
         KynoWave();
@@ -139,13 +171,13 @@ class KynoWave {
         // wrapper functions to be used in the shell
         static uint8_t wrapper_h();         // explain the available modules and commands
 
-        const char* mqtt_server = "192.168.0.100";
-        const int mqtt_port = 1883;
-        const char* mqtt_topic = "kynowave/logs";
-        const char* mqtt_cmd_topic = "kynowave/cmd";
-        const char* ssid = "ole telecom.129246";
-        const char* password = "474726264h";
-        const String clientId = "KynoWaveMVP_01";
+        const char* mqtt_server         = MQTT_SERVER;
+        const int mqtt_port             = MQTT_PORT;
+        const char* mqtt_topic          = MQTT_TOPIC;
+        const char* mqtt_cmd_topic      = MQTT_CMD_TOPIC;
+        const char* ssid                = WIFI_SSID;
+        const char* password            = WIFI_PASSWORD;
+        const String clientId           = "KynoWaveMVP_01";
 
         OTAConnection ota;
         DeviceHub hub;
