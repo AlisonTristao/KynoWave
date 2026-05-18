@@ -11,7 +11,17 @@ class OTAConnection {
 public:
     OTAConnection();
 
+    /*
+    * @brief Setup OTA handlers and start when Wi-Fi is ready.
+    *
+    * @param logger Logger reference used to print OTA status.
+    * @param display Display reference used to show OTA progress.
+    */
     void begin(Logger& logger, DisplayLCD& display);
+
+    /*
+    * @brief Handle OTA state machine (call periodically).
+    */
     void handle();
 
 private:
