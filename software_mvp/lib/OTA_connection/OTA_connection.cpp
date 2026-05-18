@@ -79,7 +79,7 @@ void OTAConnection::startIfReady() {
 void OTAConnection::onStart() {
     if (!logger_ || !display_) return;
 
-    display_->clear();
+    display_->requestTerminalClear();
     logger_->insert_log(logType::INFO, "OTA Update in progress...");
 }
 

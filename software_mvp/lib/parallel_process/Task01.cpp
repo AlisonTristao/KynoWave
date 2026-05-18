@@ -19,6 +19,9 @@ void Task01Code(void * pvParameters) {
 
         // send the messagens to ouput channel
         kynowave->logger.send_live_logger();
+
+        // update display widgets on a dedicated core
+        kynowave->updateDisplay();
     }
 }
 

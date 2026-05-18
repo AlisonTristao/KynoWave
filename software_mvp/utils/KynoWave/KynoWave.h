@@ -31,6 +31,32 @@
 #warning "WIFI_PASSWORD is not defined in platformio.ini, using default: your_password"
 #endif
 
+// time settings (NTP)
+#ifndef NTP_SERVER_1
+#define NTP_SERVER_1 "pool.ntp.org"
+#warning "NTP_SERVER_1 is not defined in platformio.ini, using default: pool.ntp.org"
+#endif
+
+#ifndef NTP_SERVER_2
+#define NTP_SERVER_2 "time.nist.gov"
+#warning "NTP_SERVER_2 is not defined in platformio.ini, using default: time.nist.gov"
+#endif
+
+#ifndef NTP_SERVER_3
+#define NTP_SERVER_3 "time.google.com"
+#warning "NTP_SERVER_3 is not defined in platformio.ini, using default: time.google.com"
+#endif
+
+#ifndef GMT_OFFSET_SEC
+#define GMT_OFFSET_SEC 0
+#warning "GMT_OFFSET_SEC is not defined in platformio.ini, using default: 0"
+#endif
+
+#ifndef DAYLIGHT_OFFSET_SEC
+#define DAYLIGHT_OFFSET_SEC 0
+#warning "DAYLIGHT_OFFSET_SEC is not defined in platformio.ini, using default: 0"
+#endif
+
 // mqtt settings
 #ifndef MQTT_SERVER
 #define MQTT_SERVER "192.168.0.100"
@@ -123,6 +149,11 @@ class KynoWave {
          */
         void connectToWiFi();
 
+        /**
+         * @brief Refresh UI data (Wi-Fi, MQTT, date/time).
+         */
+        void updateDisplay();
+
     private:
         // device adapters
         class SerialSink : public IOutputSink {
@@ -187,6 +218,9 @@ class KynoWave {
         SerialSource serial_source;
         MqttSource mqtt_source;
 
+        WifiState wifi_state_ = WifiState::Disconnected;
+        uint8_t wifi_strength_ = 0;
+        bool mqtt_connected_ = false;
         bool mqtt_cmd_pending_ = false;
         String mqtt_cmd_buffer_;
 

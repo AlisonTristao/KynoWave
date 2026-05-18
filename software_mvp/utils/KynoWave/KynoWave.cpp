@@ -1,9 +1,18 @@
 #include "KynoWave.h"
 #include <PubSubClient.h>
 #include <cstring>
+#include <time.h>
 
 // initialize the static members of the KynoWave class
 KynoWave* KynoWave::instante_ = nullptr;
+
+static uint8_t wifiStrengthFromRssi(int32_t rssi) {
+    if (rssi >= -50) return 4;
+    if (rssi >= -65) return 3;
+    if (rssi >= -75) return 2;
+    if (rssi >= -85) return 1;
+    return 0;
+}
 
 KynoWave::KynoWave()
     : hub(),
@@ -146,19 +155,25 @@ void KynoWave::begin() {
 }
 
 void KynoWave::MQTT_handle() {
-    if (!clientMQTT.connected())
+    if (!clientMQTT.connected()) {
+        mqtt_connected_ = false;
         reconnect();
+    } else {
+        mqtt_connected_ = true;
+    }
     clientMQTT.loop();
 }
 
 void KynoWave::reconnect() {
     // try one time
     if (!clientMQTT.connected()) {
+        mqtt_connected_ = false;
         logger.insert_log(logType::INFO, "Trying to connect to MQTT...");
         
         if (clientMQTT.connect(clientId.c_str())) {
             logger.insert_logf(logType::INFO, "Connected to Broker: %s", mqtt_server);
             clientMQTT.subscribe(mqtt_cmd_topic);
+            mqtt_connected_ = true;
         } else {
             logger.insert_logf(logType::INFO, "Failed, rc=%d", clientMQTT.state());
             logger.insert_log(logType::INFO, ". Trying again in 5 seconds...");
@@ -171,6 +186,8 @@ void KynoWave::connectToWiFi() {
     // wifi connection
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
+    wifi_state_ = WifiState::Connecting;
+    wifi_strength_ = 0;
 
     const uint8_t max_attempts = 5; 
     bool success = false;
@@ -188,10 +205,37 @@ void KynoWave::connectToWiFi() {
 
     if (!success) {
         logger.insert_log(logType::INFO, "Failed to connect to Wi-Fi!");
+        wifi_state_ = WifiState::Disconnected;
+        wifi_strength_ = 0;
     } else {
         logger.insert_log(logType::INFO, "Connected to Wi-Fi!");
         logger.insert_logf(logType::INFO, "IP address: %s", WiFi.localIP().toString().c_str());
+        wifi_state_ = WifiState::Connected;
+        wifi_strength_ = wifiStrengthFromRssi(WiFi.RSSI());
+
+        // sync system clock via NTP
+        configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3);
     }
+}
+
+void KynoWave::updateDisplay() {
+    if (wifi_state_ == WifiState::Connected && WiFi.status() == WL_CONNECTED) {
+        wifi_strength_ = wifiStrengthFromRssi(WiFi.RSSI());
+    }
+
+    display.setWiFiState(wifi_state_, wifi_strength_);
+    display.setMqttConnected(mqtt_connected_);
+
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo, 5)) {
+        char time_buf[6];
+        char date_buf[11];
+        snprintf(time_buf, sizeof(time_buf), "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+        snprintf(date_buf, sizeof(date_buf), "%02d/%02d/%04d", timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
+        display.setDateTime(String(time_buf), String(date_buf));
+    }
+
+    display.update();
 }
 
 void KynoWave::routine() {
