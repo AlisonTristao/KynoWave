@@ -122,6 +122,8 @@ void DateTimeWidget::draw(DisplayLCD& display) {
     tft.setFont(nullptr);
     tft.setTextColor(display.textColor(), display.bgColor());
 
+    // offsets manuais para evitar sobreposicao entre hora e data
+
     int16_t x1 = 0;
     int16_t y1 = 0;
     uint16_t w = 0;
@@ -242,6 +244,7 @@ DisplayLCD::DisplayLCD(uint8_t grid_cols, uint8_t grid_rows, uint16_t cell_width
             mqtt_widget_(1, 0, 1, 1),
             datetime_widget_(2, 0, 2, 1),
             terminal_widget_(0, 1, 3, 3) {
+    // layout 4x4: topo com status, base com terminal 3x3 e coluna direita livre
     addWidget(&wifi_widget_);
     addWidget(&mqtt_widget_);
     addWidget(&datetime_widget_);
@@ -278,6 +281,7 @@ void DisplayLCD::update() {
     if (!initialized_)
         return;
 
+    // processa pedidos de clear feitos por outras tasks
     if (clear_terminal_pending_) {
         clear_terminal_pending_ = false;
         clearTerminal();
@@ -312,11 +316,13 @@ void DisplayLCD::clearTerminal() {
 }
 
 void DisplayLCD::requestTerminalClear() {
+    // evita desenhar fora do core do display
     clear_terminal_pending_ = true;
 }
 
 PixelRect DisplayLCD::widgetRect(const DisplayWidget& widget) const {
     PixelRect rect;
+    // aplica borda interna antes de calcular o retangulo do widget
     rect.x = static_cast<int16_t>(border_px_ + widget.col() * cell_width_);
     rect.y = static_cast<int16_t>(border_px_ + widget.row() * cell_height_);
     rect.w = static_cast<int16_t>(widget.colSpan() * cell_width_);
@@ -365,6 +371,7 @@ void DisplayLCD::syncGridToDisplay() {
 
     uint16_t display_w = static_cast<uint16_t>(tft.width());
     uint16_t display_h = static_cast<uint16_t>(tft.height());
+    // calcula a area util descontando a borda
     uint16_t border = static_cast<uint16_t>(border_px_ * 2);
     uint16_t inner_w = (display_w > border) ? static_cast<uint16_t>(display_w - border) : display_w;
     uint16_t inner_h = (display_h > border) ? static_cast<uint16_t>(display_h - border) : display_h;
