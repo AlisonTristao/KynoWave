@@ -149,11 +149,6 @@ class KynoWave {
          */
         void connectToWiFi();
 
-        /**
-         * @brief Refresh UI data (Wi-Fi, MQTT, date/time).
-         */
-        void updateDisplay();
-
     private:
         // device adapters
         class SerialSink : public IOutputSink {

@@ -57,14 +57,17 @@ bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
 
         const message* msg = reinterpret_cast<const message*>(data);
         if (msg->type == logType::I2SD) {
-            size_t num_samples = msg->content.size / sizeof(int16_t);
-            for (size_t i = 0; i < num_samples; ++i) {
-                k_.display.printWrap(String(msg->content.i2sD[i]) + " ");
-            }
-            k_.display.printWrap("\n");
-        } else {
-            k_.display.printWrap(String(msg->content.text) + "\n");
+            // Avoid dumping large binary streams to the display.
+            return true;
         }
+
+        String text = String(msg->content.text);
+        const size_t max_chars = 120;
+        if (text.length() > max_chars) {
+            text = text.substring(0, max_chars) + "...";
+        }
+
+        k_.display.printWrap(text + "\n");
         return true;
     }
 
@@ -216,26 +219,6 @@ void KynoWave::connectToWiFi() {
         // sync system clock via NTP
         configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3);
     }
-}
-
-void KynoWave::updateDisplay() {
-    if (wifi_state_ == WifiState::Connected && WiFi.status() == WL_CONNECTED) {
-        wifi_strength_ = wifiStrengthFromRssi(WiFi.RSSI());
-    }
-
-    display.setWiFiState(wifi_state_, wifi_strength_);
-    display.setMqttConnected(mqtt_connected_);
-
-    struct tm timeinfo;
-    if (getLocalTime(&timeinfo, 5)) {
-        char time_buf[6];
-        char date_buf[11];
-        snprintf(time_buf, sizeof(time_buf), "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
-        snprintf(date_buf, sizeof(date_buf), "%02d/%02d/%04d", timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year + 1900);
-        display.setDateTime(String(time_buf), String(date_buf));
-    }
-
-    display.update();
 }
 
 void KynoWave::routine() {
