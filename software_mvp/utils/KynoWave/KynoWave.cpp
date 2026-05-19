@@ -154,12 +154,6 @@ void KynoWave::begin() {
             return;
         }
 
-        // Echo shell output immediately to the serial monitor.
-        Serial.print(text.c_str());
-        if (text.back() != '\n') {
-            Serial.print('\n');
-        }
-
         if (instante_) {
             instante_->logger.insert_logf(logType::DEBG, "Shell output: %s", text.c_str());
         }
