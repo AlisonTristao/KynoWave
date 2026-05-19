@@ -13,8 +13,8 @@
 #endif
 
 #ifndef OTA_PASSWORD
-#define OTA_PASSWORD "657585"
-#warning "OTA_PASSWORD is not defined in platformio.ini, using default: 657585"
+#define OTA_PASSWORD "124578"
+#warning "OTA_PASSWORD is not defined in platformio.ini, using default: 124578"
 #endif
 
 OTAConnection* OTAConnection::instance_ = nullptr;

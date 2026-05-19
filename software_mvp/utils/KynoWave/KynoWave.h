@@ -6,6 +6,7 @@
 #include <TinyShell.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <time.h>
 
 // internal libraries
 #include <Logger.h>
@@ -148,6 +149,11 @@ class KynoWave {
          * @brief Connect to the Wi-Fi network
          */
         void connectToWiFi();
+
+        WifiState wifiState() const { return wifi_state_; }
+        uint8_t wifiStrength() const { return wifi_strength_; }
+        bool mqttConnected() const { return mqtt_connected_; }
+        bool getLocalTimeInfo(struct tm& out) const;
 
     private:
         // device adapters

@@ -221,6 +221,10 @@ void KynoWave::connectToWiFi() {
     }
 }
 
+bool KynoWave::getLocalTimeInfo(struct tm& out) const {
+    return ::getLocalTime(&out, 10);
+}
+
 void KynoWave::routine() {
     // handle OTA
     ota.handle();
