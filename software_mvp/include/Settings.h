@@ -1,5 +1,5 @@
-#ifndef PINS_SETTINGS_H
-#define PINS_SETTINGS_H
+#ifndef SETTINGS_H
+#define SETTINGS_H
 
 // core and task settings
 #define CORE_0 0
@@ -40,5 +40,13 @@
 #define LOAD_FONT4
 // Free fonts and smooth font rendering use extra RAM/flash.
 // Keep disabled for stability while validating the display.
+
+// LEDS 
+#define LED_LEVEL_1 21
+#define LED_LEVEL_2 47
+#define LED_LEVEL_3 48
+#define LED_LEVEL_4 45
+#define LED_LEVEL_5 35
+#define LED_LEVEL_6 36
 
 #endif

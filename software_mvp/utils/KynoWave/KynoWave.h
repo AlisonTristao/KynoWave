@@ -7,6 +7,7 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include <time.h>
+#include <string>
 
 // internal libraries
 #include <Logger.h>
@@ -78,6 +79,8 @@
 #define MQTT_CMD_TOPIC "kynowave/cmd"
 #warning "MQTT_CMD_TOPIC is not defined in platformio.ini, using default: kynowave/cmd"
 #endif
+
+#include <KynoWaveConfigStore.h>
 
 class KynoWave {
     public:
@@ -197,19 +200,19 @@ class KynoWave {
             KynoWave& k_;
         };
 
+        void setup_leds();
+        void set_leds_from_flags();
+
         // static instance of the KynoWave class, this will be used to access the logger and shell from the tasks
         static KynoWave* instante_;
 
         // wrapper functions to be used in the shell
         static uint8_t wrapper_h();         // explain the available modules and commands
 
-        const char* mqtt_server         = MQTT_SERVER;
-        const int mqtt_port             = MQTT_PORT;
-        const char* mqtt_topic          = MQTT_TOPIC;
-        const char* mqtt_cmd_topic      = MQTT_CMD_TOPIC;
-        const char* ssid                = WIFI_SSID;
-        const char* password            = WIFI_PASSWORD;
         const String clientId           = "KynoWaveMVP_01";
+
+        KynoWaveConfig config_;
+        KynoWaveConfigStore config_store_;
 
         OTAConnection ota;
         DeviceHub hub;
@@ -218,6 +221,7 @@ class KynoWave {
         MqttSink mqtt_sink;
         SerialSource serial_source;
         MqttSource mqtt_source;
+        uint8_t leds_pins_array [6] = {LED_LEVEL_1, LED_LEVEL_2, LED_LEVEL_3, LED_LEVEL_4, LED_LEVEL_5, LED_LEVEL_6};
 
         WifiState wifi_state_ = WifiState::Disconnected;
         uint8_t wifi_strength_ = 0;
@@ -228,6 +232,30 @@ class KynoWave {
         static void mqttCallback(char* topic, uint8_t* payload, unsigned int length);
         void onMqttMessage(const char* topic, const uint8_t* payload, unsigned int length);
         bool readFromMqtt(String& input);
+
+        void registerShellModules();
+        void applyMqttSettings();
+        void applyOtaSettings();
+        bool saveConfig();
+
+        uint8_t cmdWifiGetSsid();
+        uint8_t cmdWifiSetSsid(const std::string& ssid);
+        uint8_t cmdWifiGetPassword();
+        uint8_t cmdWifiSetPassword(const std::string& password);
+
+        uint8_t cmdMqttGetServer();
+        uint8_t cmdMqttSetServer(const std::string& server);
+        uint8_t cmdMqttGetPort();
+        uint8_t cmdMqttSetPort(uint16_t port);
+        uint8_t cmdMqttGetTopic();
+        uint8_t cmdMqttSetTopic(const std::string& topic);
+        uint8_t cmdMqttGetCmdTopic();
+        uint8_t cmdMqttSetCmdTopic(const std::string& topic);
+
+        uint8_t cmdOtaGetHostname();
+        uint8_t cmdOtaSetHostname(const std::string& hostname);
+        uint8_t cmdOtaGetPassword();
+        uint8_t cmdOtaSetPassword(const std::string& password);
 
         /**
          * @brief Reconnect to the MQTT broker

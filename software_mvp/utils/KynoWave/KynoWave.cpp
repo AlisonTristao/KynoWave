@@ -98,7 +98,7 @@ bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
 
     // parse the message struct from the raw data
     const message* msg = reinterpret_cast<const message*>(data);
-        String topic = String(instante_->mqtt_topic);
+        String topic = instante_->config_.mqttTopic;
     
         if (msg->type == logType::I2SD) topic += "/i2s_data";    
         else                            topic += "/status_logs"; 
@@ -111,12 +111,20 @@ bool KynoWave::readFromSerial(String& input) {
         return false;
 
     input = Serial.readStringUntil('\n');
-    return true;
+    input.trim();
+    return input.length() > 0;
 }
 
 uint8_t ping(int number) {
     Serial.printf("human -pong %d\n", number);
     return RESULT_OK;  // return 0 to indicate success
+}
+
+void KynoWave::setup_leds() {
+    for (uint8_t i = 0; i < 6; ++i) {
+        pinMode(leds_pins_array[i], OUTPUT);
+        digitalWrite(leds_pins_array[i], LOW);
+    }
 }
 
 void KynoWave::begin() {
@@ -128,6 +136,10 @@ void KynoWave::begin() {
     logger.set_send_callback(KynoWave::sendToHub);
     logger.insert_logf(logType::INFO, "Serial initialized at baud: %u", BAUDRATE);
 
+    if (!config_store_.load(config_)) {
+        logger.insert_log(logType::ERRO, "Config load failed. Using defaults.");
+    }
+
     // setup device hub
     hub.addOutput(&serial_sink, "serial");
     hub.addOutput(&mqtt_sink, "mqtt");
@@ -138,7 +150,19 @@ void KynoWave::begin() {
     // setup the shell input callback    
     shell.begin();
     shell.set_output_callback([](const std::string& text) {
-        instante_->logger.insert_logf(logType::DEBG, "Shell output: %s", text.c_str());
+        if (text.empty()) {
+            return;
+        }
+
+        // Echo shell output immediately to the serial monitor.
+        Serial.print(text.c_str());
+        if (text.back() != '\n') {
+            Serial.print('\n');
+        }
+
+        if (instante_) {
+            instante_->logger.insert_logf(logType::DEBG, "Shell output: %s", text.c_str());
+        }
     });
 
     // setup the display
@@ -147,14 +171,18 @@ void KynoWave::begin() {
     // setup the shell
     shell.create_module("kyno", "KynoWave main module");
     shell.add(ping, "ping", "Ping the KynoWave to check if it's alive", "kyno");
+    registerShellModules();
 
     // setup the MQTT client
-    clientMQTT.setServer(mqtt_server, mqtt_port);
+    applyMqttSettings();
     clientMQTT.setBufferSize(256);
     clientMQTT.setCallback(KynoWave::mqttCallback);
 
     // setup OTA
-    ota.begin(logger, display);
+    ota.begin(logger, display, config_.otaHostname.c_str(), config_.otaPassword.c_str());
+
+    // setup the LEDs
+    setup_leds();
 }
 
 void KynoWave::MQTT_handle() {
@@ -174,8 +202,8 @@ void KynoWave::reconnect() {
         logger.insert_log(logType::INFO, "Trying to connect to MQTT...");
         
         if (clientMQTT.connect(clientId.c_str())) {
-            logger.insert_logf(logType::INFO, "Connected to Broker: %s", mqtt_server);
-            clientMQTT.subscribe(mqtt_cmd_topic);
+            logger.insert_logf(logType::INFO, "Connected to Broker: %s", config_.mqttServer.c_str());
+            clientMQTT.subscribe(config_.mqttCmdTopic.c_str());
             mqtt_connected_ = true;
         } else {
             logger.insert_logf(logType::INFO, "Failed, rc=%d", clientMQTT.state());
@@ -188,14 +216,14 @@ void KynoWave::reconnect() {
 void KynoWave::connectToWiFi() {
     // wifi connection
     WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
+    WiFi.begin(config_.wifiSsid.c_str(), config_.wifiPassword.c_str());
     wifi_state_ = WifiState::Connecting;
     wifi_strength_ = 0;
 
     const uint8_t max_attempts = 5; 
     bool success = false;
     
-    logger.insert_logf(logType::INFO, "Connecting to Wi-Fi: %s", ssid);
+    logger.insert_logf(logType::INFO, "Connecting to Wi-Fi: %s", config_.wifiSsid.c_str());
 
     for (uint8_t attempts = 0; attempts < max_attempts; ++attempts) {
         if (WiFi.waitForConnectResult() == WL_CONNECTED) {
@@ -229,9 +257,6 @@ void KynoWave::routine() {
     // handle OTA
     ota.handle();
 
-    // check MQTT 
-    MQTT_handle();
-
     // check for serial input and run the command in the shell if there is any, 
     // this allows us to interact with the shell from the serial monitor while the tasks are running
     String command;
@@ -244,10 +269,6 @@ void KynoWave::routine() {
     if (source_name == nullptr) source_name = "unknown";
     logger.insert_logf(logType::CMDO, "cmd from %s: %s", source_name, command.c_str());
     uint8_t result = shell.run_command_line(command.c_str());
-
-    // if return some error, make something...
-    if (result != RESULT_OK)
-        logger.insert_logf(logType::ERRO, "Error code: %d", result);
 }
 
 bool KynoWave::sendToHub(const uint8_t *data, size_t len) {
@@ -264,7 +285,7 @@ void KynoWave::onMqttMessage(const char* topic, const uint8_t* payload, unsigned
     if (topic == nullptr || payload == nullptr || length == 0)
         return;
 
-    if (strcmp(topic, mqtt_cmd_topic) != 0)
+    if (strcmp(topic, config_.mqttCmdTopic.c_str()) != 0)
         return;
 
     const unsigned int max_len = 255;
@@ -284,5 +305,210 @@ bool KynoWave::readFromMqtt(String& input) {
     input = mqtt_cmd_buffer_;
     mqtt_cmd_buffer_ = "";
     mqtt_cmd_pending_ = false;
-    return true;
+    input.trim();
+    return input.length() > 0;
+}
+
+void KynoWave::registerShellModules() {
+    shell.create_module("wifi", "Wi-Fi settings");
+    shell.add(std::function<uint8_t()>([this]() { return cmdWifiGetSsid(); }), "get_ssid", "Get Wi-Fi SSID", "wifi");
+    shell.add(std::function<uint8_t(std::string)>([this](std::string ssid) {
+        return cmdWifiSetSsid(ssid);
+    }), "set_ssid", "Set Wi-Fi SSID", "wifi");
+    shell.add(std::function<uint8_t()>([this]() { return cmdWifiGetPassword(); }), "get_password", "Get Wi-Fi password", "wifi");
+    shell.add(std::function<uint8_t(std::string)>([this](std::string password) {
+        return cmdWifiSetPassword(password);
+    }), "set_password", "Set Wi-Fi password", "wifi");
+
+    shell.create_module("mqtt", "MQTT settings");
+    shell.add(std::function<uint8_t()>([this]() { return cmdMqttGetServer(); }), "get_server", "Get MQTT server", "mqtt");
+    shell.add(std::function<uint8_t(std::string)>([this](std::string server) {
+        return cmdMqttSetServer(server);
+    }), "set_server", "Set MQTT server", "mqtt");
+    shell.add(std::function<uint8_t()>([this]() { return cmdMqttGetPort(); }), "get_port", "Get MQTT port", "mqtt");
+    shell.add(std::function<uint8_t(uint16_t)>([this](uint16_t port) {
+        return cmdMqttSetPort(port);
+    }), "set_port", "Set MQTT port", "mqtt");
+    shell.add(std::function<uint8_t()>([this]() { return cmdMqttGetTopic(); }), "get_topic", "Get MQTT topic", "mqtt");
+    shell.add(std::function<uint8_t(std::string)>([this](std::string topic) {
+        return cmdMqttSetTopic(topic);
+    }), "set_topic", "Set MQTT topic", "mqtt");
+    shell.add(std::function<uint8_t()>([this]() { return cmdMqttGetCmdTopic(); }), "get_cmd_topic", "Get MQTT command topic", "mqtt");
+    shell.add(std::function<uint8_t(std::string)>([this](std::string topic) {
+        return cmdMqttSetCmdTopic(topic);
+    }), "set_cmd_topic", "Set MQTT command topic", "mqtt");
+    shell.add(std::function<uint8_t()>([this]() { MQTT_handle(); return RESULT_OK; }), "reconnect", "Reconnect to MQTT broker with current settings", "mqtt");
+
+    shell.create_module("ota", "OTA settings");
+    shell.add(std::function<uint8_t()>([this]() { return cmdOtaGetHostname(); }), "get_hostname", "Get OTA hostname", "ota");
+    shell.add(std::function<uint8_t(std::string)>([this](std::string hostname) {
+        return cmdOtaSetHostname(hostname);
+    }), "set_hostname", "Set OTA hostname", "ota");
+    shell.add(std::function<uint8_t()>([this]() { return cmdOtaGetPassword(); }), "get_password", "Get OTA password", "ota");
+    shell.add(std::function<uint8_t(std::string)>([this](std::string password) {
+        return cmdOtaSetPassword(password);
+    }), "set_password", "Set OTA password", "ota");
+}
+
+void KynoWave::applyMqttSettings() {
+    clientMQTT.setServer(config_.mqttServer.c_str(), config_.mqttPort);
+}
+
+void KynoWave::applyOtaSettings() {
+    ota.applySettings(config_.otaHostname.c_str(), config_.otaPassword.c_str());
+}
+
+bool KynoWave::saveConfig() {
+    if (config_store_.save(config_)) {
+        return true;
+    }
+
+    logger.insert_log(logType::ERRO, "Failed to save config to SPIFFS.");
+    return false;
+}
+
+uint8_t KynoWave::cmdWifiGetSsid() {
+    logger.insert_logf(logType::INFO, "Wi-Fi SSID: %s", config_.wifiSsid.c_str());
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdWifiSetSsid(const std::string& ssid) {
+    if (ssid.empty()) {
+        logger.insert_log(logType::ERRO, "Wi-Fi SSID cannot be empty.");
+        return RESULT_ERROR;
+    }
+
+    config_.wifiSsid = ssid.c_str();
+    if (!saveConfig()) return RESULT_ERROR;
+    logger.insert_logf(logType::INFO, "Wi-Fi SSID updated: %s", config_.wifiSsid.c_str());
+    connectToWiFi();
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdWifiGetPassword() {
+    logger.insert_logf(logType::INFO, "Wi-Fi password: %s", config_.wifiPassword.c_str());
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdWifiSetPassword(const std::string& password) {
+    if (password.empty()) {
+        logger.insert_log(logType::ERRO, "Wi-Fi password cannot be empty.");
+        return RESULT_ERROR;
+    }
+
+    config_.wifiPassword = password.c_str();
+    if (!saveConfig()) return RESULT_ERROR;
+    logger.insert_log(logType::INFO, "Wi-Fi password updated.");
+    connectToWiFi();
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttGetServer() {
+    logger.insert_logf(logType::INFO, "MQTT server: %s", config_.mqttServer.c_str());
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttSetServer(const std::string& server) {
+    if (server.empty()) {
+        logger.insert_log(logType::ERRO, "MQTT server cannot be empty.");
+        return RESULT_ERROR;
+    }
+
+    config_.mqttServer = server.c_str();
+    if (!saveConfig()) return RESULT_ERROR;
+    applyMqttSettings();
+    clientMQTT.disconnect();
+    reconnect();
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttGetPort() {
+    logger.insert_logf(logType::INFO, "MQTT port: %u", static_cast<unsigned int>(config_.mqttPort));
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttSetPort(uint16_t port) {
+    if (port == 0) {
+        logger.insert_log(logType::ERRO, "MQTT port must be greater than zero.");
+        return RESULT_ERROR;
+    }
+
+    config_.mqttPort = port;
+    if (!saveConfig()) return RESULT_ERROR;
+    applyMqttSettings();
+    clientMQTT.disconnect();
+    reconnect();
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttGetTopic() {
+    logger.insert_logf(logType::INFO, "MQTT topic: %s", config_.mqttTopic.c_str());
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttSetTopic(const std::string& topic) {
+    if (topic.empty()) {
+        logger.insert_log(logType::ERRO, "MQTT topic cannot be empty.");
+        return RESULT_ERROR;
+    }
+
+    config_.mqttTopic = topic.c_str();
+    if (!saveConfig()) return RESULT_ERROR;
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttGetCmdTopic() {
+    logger.insert_logf(logType::INFO, "MQTT command topic: %s", config_.mqttCmdTopic.c_str());
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdMqttSetCmdTopic(const std::string& topic) {
+    if (topic.empty()) {
+        logger.insert_log(logType::ERRO, "MQTT command topic cannot be empty.");
+        return RESULT_ERROR;
+    }
+
+    String old_topic = config_.mqttCmdTopic;
+    config_.mqttCmdTopic = topic.c_str();
+    if (!saveConfig()) return RESULT_ERROR;
+
+    if (clientMQTT.connected()) {
+        clientMQTT.unsubscribe(old_topic.c_str());
+        clientMQTT.subscribe(config_.mqttCmdTopic.c_str());
+    }
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdOtaGetHostname() {
+    logger.insert_logf(logType::INFO, "OTA hostname: %s", config_.otaHostname.c_str());
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdOtaSetHostname(const std::string& hostname) {
+    if (hostname.empty()) {
+        logger.insert_log(logType::ERRO, "OTA hostname cannot be empty.");
+        return RESULT_ERROR;
+    }
+
+    config_.otaHostname = hostname.c_str();
+    if (!saveConfig()) return RESULT_ERROR;
+    applyOtaSettings();
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdOtaGetPassword() {
+    logger.insert_logf(logType::INFO, "OTA password: %s", config_.otaPassword.c_str());
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdOtaSetPassword(const std::string& password) {
+    if (password.empty()) {
+        logger.insert_log(logType::ERRO, "OTA password cannot be empty.");
+        return RESULT_ERROR;
+    }
+
+    config_.otaPassword = password.c_str();
+    if (!saveConfig()) return RESULT_ERROR;
+    applyOtaSettings();
+    return RESULT_OK;
 }

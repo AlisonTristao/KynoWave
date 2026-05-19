@@ -13,6 +13,8 @@ void Task02Code(void * pvParameters) {
     // add a log message to indicate that the task is running and the core it is running on
     kynowave->logger.insert_logf(logType::INFO, "Task 2 running on core %u", xPortGetCoreID());
 
+    uint32_t timer = 0;
+
     while (true) {
         // delay to avoid consuming too much CPU time...
         vTaskDelay(pdMS_TO_TICKS(1)); 

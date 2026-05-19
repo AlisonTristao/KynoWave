@@ -175,20 +175,22 @@ void DisplayLCD::initUi() {
     lv_obj_align(wifi_icon_, LV_ALIGN_LEFT_MID, 0, 0);
 
     uint16_t content_h = (display_h_ > kTopBarHeight) ? (display_h_ - kTopBarHeight) : 0;
+    content_h_ = content_h;
 
     content_log_ = lv_obj_create(screen_);
     lv_obj_set_size(content_log_, display_w_, content_h);
     lv_obj_set_pos(content_log_, 0, kTopBarHeight);
     lv_obj_set_style_bg_color(content_log_, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(content_log_, 0, 0);
+    lv_obj_set_style_pad_all(content_log_, 0, 0);
     lv_obj_set_style_radius(content_log_, 0, 0);
     lv_obj_clear_flag(content_log_, LV_OBJ_FLAG_SCROLLABLE);
 
     log_label_ = lv_label_create(content_log_);
-    lv_obj_set_width(log_label_, display_w_ - 6);
+    lv_obj_set_width(log_label_, display_w_);
     lv_label_set_long_mode(log_label_, LV_LABEL_LONG_WRAP);
     lv_label_set_text(log_label_, "");
-    lv_obj_align(log_label_, LV_ALIGN_TOP_LEFT, 3, 3);
+    lv_obj_align(log_label_, LV_ALIGN_TOP_LEFT, 0, 0);
 #if LV_FONT_MONTSERRAT_10
     lv_obj_set_style_text_font(log_label_, &lv_font_montserrat_10, 0);
 #endif
@@ -233,6 +235,39 @@ void DisplayLCD::pushLogLine(const String& line) {
 void DisplayLCD::refreshLogLabel() {
     if (log_label_ == nullptr)
         return;
+
+    const lv_font_t* font = lv_obj_get_style_text_font(log_label_, LV_PART_MAIN);
+    lv_coord_t max_w = static_cast<lv_coord_t>(display_w_);
+    lv_coord_t max_h = static_cast<lv_coord_t>(content_h_);
+    lv_coord_t letter_space = lv_obj_get_style_text_letter_space(log_label_, LV_PART_MAIN);
+    lv_coord_t line_space = lv_obj_get_style_text_line_space(log_label_, LV_PART_MAIN);
+
+    while (log_line_count_ > 0) {
+        String combined;
+        for (uint8_t i = 0; i < log_line_count_; ++i) {
+            combined += log_lines_[i];
+            if (i + 1 < log_line_count_)
+                combined += "\n";
+        }
+
+        lv_point_t text_size;
+        lv_txt_get_size(&text_size,
+                        combined.c_str(),
+                        font,
+                        letter_space,
+                        line_space,
+                        max_w,
+                        LV_TEXT_FLAG_NONE);
+
+        if (text_size.y <= max_h) {
+            break;
+        }
+
+        for (uint8_t i = 1; i < log_line_count_; ++i) {
+            log_lines_[i - 1] = log_lines_[i];
+        }
+        log_line_count_--;
+    }
 
     String combined;
     for (uint8_t i = 0; i < log_line_count_; ++i) {

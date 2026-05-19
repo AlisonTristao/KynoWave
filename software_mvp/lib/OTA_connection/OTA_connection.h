@@ -17,12 +17,14 @@ public:
     * @param logger Logger reference used to print OTA status.
     * @param display Display reference used to show OTA progress.
     */
-    void begin(Logger& logger, DisplayLCD& display);
+    void begin(Logger& logger, DisplayLCD& display, const char* hostname, const char* password);
 
     /*
     * @brief Handle OTA state machine (call periodically).
     */
     void handle();
+
+    void applySettings(const char* hostname, const char* password);
 
 private:
     static OTAConnection* instance_;

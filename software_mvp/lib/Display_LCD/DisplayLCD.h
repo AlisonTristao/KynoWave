@@ -54,6 +54,7 @@ class DisplayLCD {
 
         uint16_t display_w_ = 0;
         uint16_t display_h_ = 0;
+        uint16_t content_h_ = 0;
         uint32_t last_tick_ms_ = 0;
 
         static constexpr uint8_t kTopBarHeight = 18;

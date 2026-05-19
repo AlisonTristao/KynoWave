@@ -20,7 +20,6 @@ void Task01Code(void * pvParameters) {
     constexpr uint32_t kLogIntervalMs = 100;
 
     uint32_t last_status_ms = 0;
-    uint32_t last_log_ms = 0;
 
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(kUiTickMs));
@@ -47,10 +46,7 @@ void Task01Code(void * pvParameters) {
             last_status_ms = now;
         }
 
-        if (now - last_log_ms >= kLogIntervalMs) {
-            kynowave->logger.send_live_logger();
-            last_log_ms = now;
-        }
+        kynowave->logger.send_live_logger();
     }
 }
 
