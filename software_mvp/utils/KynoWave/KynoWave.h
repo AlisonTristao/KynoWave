@@ -84,11 +84,14 @@
 
 class KynoWave {
     public:
-        KynoWave();
+        KynoWave(const String& mqtt_name = "KynoWave_DEFAULTNAME");
+        ~KynoWave() {
+            // clean up resources if needed
+        }
 
         void begin();
 
-        // members
+        // public members
         Logger logger;
         TinyShell shell;
         DisplayLCD display;
@@ -153,10 +156,37 @@ class KynoWave {
          */
         void connectToWiFi();
 
+        /**
+         * @brief Get the current Wi-Fi state
+         * @return The current Wi-Fi state
+         */
         WifiState wifiState() const { return wifi_state_; }
+
+        /**
+         * @brief Get the Wi-Fi signal strength
+         * @return The Wi-Fi signal strength
+         */
         uint8_t wifiStrength() const { return wifi_strength_; }
+
+        /**
+         * @brief Check if the MQTT client is connected
+         * @return true if the MQTT client is connected, false otherwise
+         */
         bool mqttConnected() const { return mqtt_connected_; }
+
+        /**
+         * @brief Get the local time information
+         * @param out Reference to a struct tm to store the time information
+         * @return true if the time information was retrieved successfully, false otherwise
+         */
         bool getLocalTimeInfo(struct tm& out) const;
+
+        /**
+         * @brief set the leds state
+         * @param state value between 0 and NUM_LEDS, where 0 means all leds off and NUM_LEDS means all leds on
+         */
+        void setLedsIntensity(uint8_t intensity);
+        void setLeds(uint8_t state);
 
     private:
         // device adapters
@@ -201,19 +231,20 @@ class KynoWave {
         };
 
         void setup_leds();
-        void set_leds_from_flags();
+
+        // wrapper functions to be used in the shell
+        // explain the available modules and commands
+        static uint8_t wrapper_h();         
+        const String clientId = "KynoWave_DEFAULTNAME";
 
         // static instance of the KynoWave class, this will be used to access the logger and shell from the tasks
         static KynoWave* instante_;
-
-        // wrapper functions to be used in the shell
-        static uint8_t wrapper_h();         // explain the available modules and commands
-
-        const String clientId           = "KynoWaveMVP_01";
-
+        
+        // configuration and state information, this can be loaded from a file from spiffs
         KynoWaveConfig config_;
         KynoWaveConfigStore config_store_;
 
+        // private members
         OTAConnection ota;
         DeviceHub hub;
         SerialSink serial_sink;
@@ -221,7 +252,7 @@ class KynoWave {
         MqttSink mqtt_sink;
         SerialSource serial_source;
         MqttSource mqtt_source;
-        uint8_t leds_pins_array [6] = {LED_LEVEL_1, LED_LEVEL_2, LED_LEVEL_3, LED_LEVEL_4, LED_LEVEL_5, LED_LEVEL_6};
+        uint8_t leds_pins_array [NUM_LEDS] = LEDS_ARR;
 
         WifiState wifi_state_ = WifiState::Disconnected;
         uint8_t wifi_strength_ = 0;
@@ -229,20 +260,25 @@ class KynoWave {
         bool mqtt_cmd_pending_ = false;
         String mqtt_cmd_buffer_;
 
+        // methods to handle the MQTT communication and commands
         static void mqttCallback(char* topic, uint8_t* payload, unsigned int length);
         void onMqttMessage(const char* topic, const uint8_t* payload, unsigned int length);
         bool readFromMqtt(String& input);
 
+        // methods to handle the shell commands, 
+        // these will be registered in the shell and can be called from the serial input or MQTT commands
         void registerShellModules();
         void applyMqttSettings();
         void applyOtaSettings();
         bool saveConfig();
 
+        // shell command handlers to get/set the wifi 
         uint8_t cmdWifiGetSsid();
         uint8_t cmdWifiSetSsid(const std::string& ssid);
         uint8_t cmdWifiGetPassword();
         uint8_t cmdWifiSetPassword(const std::string& password);
 
+        // MQTT command handlers to get/set the MQTT settings
         uint8_t cmdMqttGetServer();
         uint8_t cmdMqttSetServer(const std::string& server);
         uint8_t cmdMqttGetPort();
@@ -252,6 +288,7 @@ class KynoWave {
         uint8_t cmdMqttGetCmdTopic();
         uint8_t cmdMqttSetCmdTopic(const std::string& topic);
 
+        // OTA command handlers to get/set the OTA settings
         uint8_t cmdOtaGetHostname();
         uint8_t cmdOtaSetHostname(const std::string& hostname);
         uint8_t cmdOtaGetPassword();

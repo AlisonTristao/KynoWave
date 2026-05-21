@@ -13,26 +13,12 @@
 // header
 #include <Settings.h>
 
-// function to define leds as outputs and set them to HIGH
-void setupLeds() {
-    
-
-    digitalWrite(LED_LEVEL_1, HIGH);
-    digitalWrite(LED_LEVEL_2, HIGH);
-    digitalWrite(LED_LEVEL_3, HIGH);
-    digitalWrite(LED_LEVEL_4, HIGH);
-    digitalWrite(LED_LEVEL_5, HIGH);
-    digitalWrite(LED_LEVEL_6, HIGH);
-}
-
 // create the instance of the kynowave class, to use the static members
 KynoWave kynowave;
 
 void setup() {
     // set the send callback of the logger to the function that will print the messages to the serial
     kynowave.begin();
-
-    setupLeds();
 
     // init the tasks 01 to print the logs 
     startTask01(kynowave.getInstance(), CORE_0); // warning, this core is used to wifi and bluetooth too
@@ -50,5 +36,6 @@ void setup() {
 void loop() {
     // stopping the loop to avoid consuming CPU time, since we are using tasks to run the code in parallel
     kynowave.logger.insert_log(logType::DEBG, "Stopping the void loop...");
-    vTaskDelete(NULL); // delete the loop task to stop it from running
+
+    vTaskDelete(NULL);
 }

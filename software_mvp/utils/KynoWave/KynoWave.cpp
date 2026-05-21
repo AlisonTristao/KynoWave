@@ -14,8 +14,9 @@ static uint8_t wifiStrengthFromRssi(int32_t rssi) {
     return 0;
 }
 
-KynoWave::KynoWave()
-    : hub(),
+KynoWave::KynoWave(const String& mqtt_name)
+    : clientId(mqtt_name),
+      hub(),
       serial_sink(*this),
       display_sink(*this),
       mqtt_sink(*this),
@@ -52,45 +53,45 @@ bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
     return true;
 }
 
-    bool KynoWave::DisplaySink::send(const uint8_t* data, size_t len) {
-        if (data == nullptr || len == 0) return false;
+bool KynoWave::DisplaySink::send(const uint8_t* data, size_t len) {
+    if (data == nullptr || len == 0) return false;
 
-        const message* msg = reinterpret_cast<const message*>(data);
-        if (msg->type == logType::I2SD) {
-            // Avoid dumping large binary streams to the display.
-            return true;
-        }
-
-        String text = String(msg->content.text);
-        const size_t max_chars = 120;
-        if (text.length() > max_chars) {
-            text = text.substring(0, max_chars) + "...";
-        }
-
-        k_.display.printWrap(text + "\n");
+    const message* msg = reinterpret_cast<const message*>(data);
+    if (msg->type == logType::I2SD) {
+        // Avoid dumping large binary streams to the display.
         return true;
     }
 
-    bool KynoWave::MqttSink::send(const uint8_t* data, size_t len) {
-        return KynoWave::sendToMQTT(data, len);
+    String text = String(msg->content.text);
+    const size_t max_chars = 120;
+    if (text.length() > max_chars) {
+        text = text.substring(0, max_chars) + "...";
     }
 
-    bool KynoWave::SerialSource::read(String& out) {
-        return KynoWave::readFromSerial(out);
-    }
+    k_.display.printWrap(text + "\n");
+    return true;
+}
 
-    bool KynoWave::MqttSource::read(String& out) {
-        return k_.readFromMqtt(out);
-    }
+bool KynoWave::MqttSink::send(const uint8_t* data, size_t len) {
+    return KynoWave::sendToMQTT(data, len);
+}
 
-    bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
-        if (instante_ == nullptr) return false;
-        return instante_->serial_sink.send(data, len);
-    }
+bool KynoWave::SerialSource::read(String& out) {
+    return KynoWave::readFromSerial(out);
+}
 
-    bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
-        if (data == nullptr || len == 0) return false;
-        if (instante_ == nullptr) return false;
+bool KynoWave::MqttSource::read(String& out) {
+    return k_.readFromMqtt(out);
+}
+
+bool KynoWave::sendToSerial(const uint8_t *data, size_t len) {
+    if (instante_ == nullptr) return false;
+    return instante_->serial_sink.send(data, len);
+}
+
+bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
+    if (data == nullptr || len == 0) return false;
+    if (instante_ == nullptr) return false;
 
     //  verify MQTT connection before trying to publish
     if (!instante_->clientMQTT.connected()) 
@@ -99,7 +100,7 @@ bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
     // parse the message struct from the raw data
     const message* msg = reinterpret_cast<const message*>(data);
         String topic = instante_->config_.mqttTopic;
-    
+
         if (msg->type == logType::I2SD) topic += "/i2s_data";    
         else                            topic += "/status_logs"; 
     return instante_->clientMQTT.publish(topic.c_str(), data, static_cast<unsigned int>(len));
@@ -120,11 +121,27 @@ uint8_t ping(int number) {
     return RESULT_OK;  // return 0 to indicate success
 }
 
+void KynoWave::setLedsIntensity(uint8_t intensity) {
+    // convert the value to bits 
+    uint8_t state = 0;
+    for (uint8_t i = 0; i < NUM_LEDS; ++i)
+        if (intensity > i) 
+            state |= (1 << i);
+
+    // set the state 
+    setLeds(state);
+}
+
 void KynoWave::setup_leds() {
-    for (uint8_t i = 0; i < 6; ++i) {
+    for (uint8_t i = 0; i < NUM_LEDS; ++i) {
         pinMode(leds_pins_array[i], OUTPUT);
         digitalWrite(leds_pins_array[i], LOW);
     }
+}
+
+void KynoWave::setLeds(uint8_t state) {
+    for (uint8_t i = 0; i < NUM_LEDS; ++i)
+        digitalWrite(leds_pins_array[i], state & (1 << i) ? HIGH : LOW);
 }
 
 void KynoWave::begin() {
