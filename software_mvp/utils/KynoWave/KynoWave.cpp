@@ -149,7 +149,7 @@ bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
 
         if (msg->type == logType::I2SD) topic += "/i2s_data";    
         else                            topic += "/status_logs"; 
-    return instante_->clientMQTT.publish(topic.c_str(), data, static_cast<unsigned int>(len));
+    return instante_->clientMQTT.publish(topic.c_str(), msg->content.text, static_cast<unsigned int>(len));
 }
 
 // receive a string pointer
@@ -255,7 +255,7 @@ void KynoWave::MQTT_handle() {
 
 void KynoWave::reconnect() {
     // verify MQTT connection before trying to reconnect
-    if (!clientMQTT.connected())
+    if (clientMQTT.connected())
         return;
 
         // try to reconnect to MQTT broker
@@ -275,11 +275,12 @@ void KynoWave::reconnect() {
 void KynoWave::connectToWiFi() {
     // wifi connection
     WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(false);
     WiFi.begin(config_.wifiSsid.c_str(), config_.wifiPassword.c_str());
     wifi_state_ = WifiState::Connecting;
     wifi_strength_ = 0;
 
-    const uint8_t max_attempts = 5; 
+    const uint8_t max_attempts = 1; 
     bool success = false;
     
     logger.insert_logf(logType::INFO, "Connecting to Wi-Fi: %s", config_.wifiSsid.c_str());
@@ -313,8 +314,11 @@ bool KynoWave::getLocalTimeInfo(struct tm& out) const {
 }
 
 void KynoWave::routine() {
-    // handle OTA
-    ota.handle();
+    // handle OTA and MqTT (wifi must be connected)
+    if (wifi_state_ == WifiState::Connected) {
+        ota.handle();
+        MQTT_handle();
+    }
 
     // check for serial input and run the command in the shell if there is any, 
     // this allows us to interact with the shell from the serial monitor while the tasks are running
@@ -365,6 +369,7 @@ bool KynoWave::readFromMqtt(String& input) {
     mqtt_cmd_buffer_ = "";
     mqtt_cmd_pending_ = false;
     input.trim();
+    Serial.printf("Received MQTT command: %s\n", input.c_str());
     return input.length() > 0;
 }
 
@@ -399,6 +404,11 @@ void KynoWave::registerShellModules() {
         return cmdMqttSetCmdTopic(topic);
     }), "set_cmd_topic", "Set MQTT command topic", "mqtt");
     shell.add(std::function<uint8_t()>([this]() { MQTT_handle(); return RESULT_OK; }), "reconnect", "Reconnect to MQTT broker with current settings", "mqtt");
+    // send a message to mqtt 
+    shell.add(std::function<uint8_t()>([this]() { 
+        const char* test_msg = "Hello MQTT!";
+        return sendToMQTT(reinterpret_cast<const uint8_t*>(test_msg), strlen(test_msg)) ? RESULT_OK : RESULT_ERROR; 
+    }), "ping", "Ping MQTT broker", "mqtt");
 
     shell.create_module("ota", "OTA settings");
     shell.add(std::function<uint8_t()>([this]() { return cmdOtaGetHostname(); }), "get_hostname", "Get OTA hostname", "ota");
