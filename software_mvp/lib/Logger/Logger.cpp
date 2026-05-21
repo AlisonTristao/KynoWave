@@ -152,7 +152,7 @@ void Logger::insert_log_impl(const uint8_t* data, size_t len, logType type, uint
 
         message& m          = messages[message_count++];
         m.timer             = ts;
-        m.type              = (i == 0U) ? type : logType::PAKG; // only the first packet gets the original type, the rest are marked as PAKG (packet)
+        m.type              = type;
         m.packet_number     = i + 1;
         m.total_packets     = total_packets_to_send;
         m.content.size      = length;

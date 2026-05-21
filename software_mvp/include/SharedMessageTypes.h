@@ -23,7 +23,6 @@ enum class logType : uint8_t {
     DEBG,           // debug messages
     CMDO,           // terminal commands received
     I2SD,           // i2s sound data
-    PAKG,           // package messages
 };
 
 // creates a struct union to convert the message text or sound data to a byte array, 
@@ -65,7 +64,6 @@ inline constexpr const char* logTypeToString(logType type) {
         case logType::WARN:         return "WARN";
         case logType::ERRO:         return "ERRO";
         case logType::DEBG:         return "DEBG";
-        case logType::PAKG:         return "PAKG";
         case logType::NONE:         return "NONE";
         case logType::I2SD:         return "I2SD";
         // capotamo o corsa

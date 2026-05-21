@@ -74,7 +74,6 @@ bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
     switch (msg->type) {
         case logType::INFO:
         case logType::CMDO:
-        case logType::PAKG:
             ESP_LOGI("SerialSink", "%s", buffer);
             break;
 
