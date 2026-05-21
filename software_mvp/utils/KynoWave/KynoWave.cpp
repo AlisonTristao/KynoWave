@@ -405,8 +405,11 @@ void KynoWave::registerShellModules() {
     shell.add(std::function<uint8_t()>([this]() { MQTT_handle(); return RESULT_OK; }), "reconnect", "Reconnect to MQTT broker with current settings", "mqtt");
     // send a message to mqtt 
     shell.add(std::function<uint8_t()>([this]() { 
-        const char* test_msg = "Hello MQTT!";
-        return sendToMQTT(reinterpret_cast<const uint8_t*>(test_msg), strlen(test_msg)) ? RESULT_OK : RESULT_ERROR; 
+        message test_msg;
+        test_msg.type = logType::CMDO;
+        snprintf(test_msg.content.text, sizeof(test_msg.content.text), "Hello MQTT! Time: %lu", (unsigned long)millis());
+        test_msg.content.size = strlen(test_msg.content.text);
+        return sendToMQTT(reinterpret_cast<const uint8_t*>(&test_msg), sizeof(test_msg)) ? RESULT_OK : RESULT_ERROR; 
     }), "ping", "Ping MQTT broker", "mqtt");
 
     shell.create_module("ota", "OTA settings");
