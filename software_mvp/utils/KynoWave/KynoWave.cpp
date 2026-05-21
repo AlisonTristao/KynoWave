@@ -161,11 +161,6 @@ bool KynoWave::readFromSerial(String& input) {
     return input.length() > 0;
 }
 
-uint8_t ping(int number) {
-    Serial.printf("human -pong %d\n", number);
-    return RESULT_OK;  // return 0 to indicate success
-}
-
 void KynoWave::setLedsIntensity(uint8_t intensity) {
     // convert the value to bits 
     uint8_t state = 0;
@@ -185,8 +180,11 @@ void KynoWave::setup_leds() {
 }
 
 void KynoWave::setLeds(uint8_t state) {
-    for (uint8_t i = 0; i < NUM_LEDS; ++i)
-        digitalWrite(leds_pins_array[i], state & (1 << i) ? HIGH : LOW);
+    for (uint8_t i = 0; i < NUM_LEDS; ++i){
+        uint8_t intensity = (state & (1 << i)) ? 255 : 0;
+        if (i == 0 || i == 1) intensity /= 10;
+        analogWrite(leds_pins_array[i], intensity);
+    }
 }
 
 void KynoWave::begin() {
@@ -213,21 +211,25 @@ void KynoWave::begin() {
     // setup the shell input callback    
     shell.begin();
     shell.set_output_callback([](const std::string& text) {
-        if (text.empty()) {
+        if (text.empty())
             return;
-        }
-
-        if (instante_) {
+        if (instante_)
             instante_->logger.insert_logf(logType::DEBG, "Shell output: %s", text.c_str());
-        }
     });
 
     // setup the display
     display.begin();
 
-    // setup the shell
+    // setup the kyno basic module
     shell.create_module("kyno", "KynoWave main module");
-    shell.add(ping, "ping", "Ping the KynoWave to check if it's alive", "kyno");
+    shell.add(std::function<uint8_t()>([this](){ 
+        instante_->logger.insert_log(logType::INFO, "Pong!");    
+        return RESULT_OK; 
+    }), "ping", "Ping the KynoWave to check if it's alive", "kyno");
+    shell.add(std::function<uint8_t(uint8_t)>([this](uint8_t intensity){ 
+        instante_->setLedsIntensity(intensity);
+        return RESULT_OK;
+    }), "set_leds", "Set the intensity of the LEDs", "kyno");
     registerShellModules();
 
     // setup the MQTT client

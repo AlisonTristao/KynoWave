@@ -42,12 +42,12 @@
 // Keep disabled for stability while validating the display.
 
 // LEDS 
-#define LED_6       21
-#define LED_5       47
-#define LED_4       48
-#define LED_3       45
-#define LED_2       35
-#define LED_1       36
+#define LED_1       21
+#define LED_2       47
+#define LED_3       48
+#define LED_4       45
+#define LED_5       35
+#define LED_6       36
 #define NUM_LEDS     6
 #define LEDS_ARR {LED_1, LED_2, LED_3, LED_4, LED_5, LED_6}
 
