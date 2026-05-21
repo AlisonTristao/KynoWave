@@ -277,6 +277,8 @@ class KynoWave {
         uint8_t cmdWifiSetSsid(const std::string& ssid);
         uint8_t cmdWifiGetPassword();
         uint8_t cmdWifiSetPassword(const std::string& password);
+        uint8_t cmdWifiGetState();
+        uint8_t cmdWifiReconnect();
 
         // MQTT command handlers to get/set the MQTT settings
         uint8_t cmdMqttGetServer();

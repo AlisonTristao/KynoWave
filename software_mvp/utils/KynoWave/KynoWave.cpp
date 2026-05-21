@@ -2,6 +2,7 @@
 #include <PubSubClient.h>
 #include <cstring>
 #include <time.h>
+#include "esp_log.h"
 
 // initialize the static members of the KynoWave class
 KynoWave* KynoWave::instante_ = nullptr;
@@ -30,26 +31,71 @@ KynoWave::KynoWave(const String& mqtt_name)
 }
 
 bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
-    if (data == nullptr || len == 0) return false;
-
+    if (data == nullptr || len < sizeof(message)) return false;
     const message* msg = reinterpret_cast<const message*>(data);
-    // [timer] [type] [n/total] message
-    Serial.printf("[%lu ms] [%s] [%u/%u] ", 
-        msg->timer, 
-        logTypeToString(msg->type), 
-        msg->packet_number, 
-        msg->total_packets
-    );
+    char buffer[512];
 
     if (msg->type == logType::I2SD) {
         size_t num_samples = msg->content.size / sizeof(int16_t);
-        for (size_t i = 0; i < num_samples; ++i) {
-            Serial.printf("%d ", msg->content.i2sD[i]);
+        size_t offset = 0;
+
+        offset += snprintf(
+            buffer + offset,
+            sizeof(buffer) - offset,
+            "[%lu ms] [%s] [%u/%u] ",
+            (unsigned long)msg->timer,
+            logTypeToString(msg->type),
+            msg->packet_number,
+            msg->total_packets
+        );
+
+        for (size_t i = 0; i < num_samples && offset < sizeof(buffer); ++i) {
+            offset += snprintf(
+                buffer + offset,
+                sizeof(buffer) - offset,
+                "%d ",
+                msg->content.i2sD[i]
+            );
         }
-        Serial.print("\n");
+
     } else {
-        Serial.printf("%s\n", msg->content.text);
+        snprintf(
+            buffer,
+            sizeof(buffer),
+            "[%lu ms] [%s] [%u/%u] %s",
+            (unsigned long)msg->timer,
+            logTypeToString(msg->type),
+            msg->packet_number,
+            msg->total_packets,
+            msg->content.text
+        );
     }
+
+    switch (msg->type) {
+        case logType::INFO:
+        case logType::CMDO:
+        case logType::PAKG:
+            ESP_LOGI("SerialSink", "%s", buffer);
+            break;
+
+        case logType::WARN:
+            ESP_LOGW("SerialSink", "%s", buffer);
+            break;
+
+        case logType::ERRO:
+            ESP_LOGE("SerialSink", "%s", buffer);
+            break;
+
+        case logType::DEBG:
+        case logType::I2SD:
+            ESP_LOGD("SerialSink", "%s", buffer);
+            break;
+
+        default:
+            ESP_LOGI("SerialSink", "%s", buffer);
+            break;
+    }
+
     return true;
 }
 
@@ -147,6 +193,7 @@ void KynoWave::setLeds(uint8_t state) {
 void KynoWave::begin() {
     // init the serial communication and print a log message to indicate that the serial is initialized
     Serial.begin(BAUDRATE);
+    esp_log_level_set("*", LOG_LEVEL);
 
     // setup the logger
     logger.begin();
@@ -331,6 +378,8 @@ void KynoWave::registerShellModules() {
     shell.add(std::function<uint8_t(std::string)>([this](std::string password) {
         return cmdWifiSetPassword(password);
     }), "set_password", "Set Wi-Fi password", "wifi");
+    shell.add(std::function<uint8_t()>([this]() { return cmdWifiGetState(); }), "get_state", "Get Wi-Fi state", "wifi");
+    shell.add(std::function<uint8_t()>([this]() { return cmdWifiReconnect(); }), "reconnect", "Reconnect to Wi-Fi network", "wifi");
 
     shell.create_module("mqtt", "MQTT settings");
     shell.add(std::function<uint8_t()>([this]() { return cmdMqttGetServer(); }), "get_server", "Get MQTT server", "mqtt");
@@ -411,6 +460,23 @@ uint8_t KynoWave::cmdWifiSetPassword(const std::string& password) {
     config_.wifiPassword = password.c_str();
     if (!saveConfig()) return RESULT_ERROR;
     logger.insert_log(logType::INFO, "Wi-Fi password updated.");
+    connectToWiFi();
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdWifiGetState() {
+    const char* state_str = "Unknown";
+    switch (wifi_state_) {
+        case WifiState::Disconnected: state_str = "Disconnected"; break;
+        case WifiState::Connecting:   state_str = "Connecting"; break;
+        case WifiState::Connected:    state_str = "Connected"; break;
+    }
+    logger.insert_logf(logType::INFO, "Wi-Fi state: %s", state_str);
+    return RESULT_OK;
+}
+
+uint8_t KynoWave::cmdWifiReconnect() {
+    logger.insert_log(logType::INFO, "Reconnecting to Wi-Fi...");
     connectToWiFi();
     return RESULT_OK;
 }

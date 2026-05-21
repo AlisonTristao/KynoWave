@@ -18,10 +18,11 @@
 enum class logType : uint8_t {
     NONE = 0,       // default type, should not be used for actual log messages
     INFO,           // informational messages that indicate normal operation and important events
-    CMDO,           // terminal commands received
-    I2SD,           // i2s sound data
+    WARN,           // warning messages that indicate potential issues or important notices that are not errors
     ERRO,           // error messages
     DEBG,           // debug messages
+    CMDO,           // terminal commands received
+    I2SD,           // i2s sound data
     PAKG,           // package messages
 };
 
@@ -61,6 +62,7 @@ inline constexpr const char* logTypeToString(logType type) {
     switch (type) {
         case logType::INFO:         return "INFO";
         case logType::CMDO:         return "CMDO";
+        case logType::WARN:         return "WARN";
         case logType::ERRO:         return "ERRO";
         case logType::DEBG:         return "DEBG";
         case logType::PAKG:         return "PAKG";
