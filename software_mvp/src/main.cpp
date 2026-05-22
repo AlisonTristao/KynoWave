@@ -23,11 +23,11 @@ void setup() {
     // init the tasks 01 to print the logs 
     startTask01(kynowave.getInstance(), CORE_0); // warning, this core is used to wifi and bluetooth too
 
-    // saves the free memory
-    kynowave.logger.insert_logf(logType::DEBG, "Free heap: %0.2f KB",       (float)esp_get_free_heap_size() / 1024);
-
     // connect to WiFi and MQTT
     kynowave.connectToWiFi();
+
+    // saves the free memory
+    kynowave.logger.insert_logf(logType::DEBG, "Free heap: %0.2f KB",       (float)esp_get_free_heap_size() / 1024);
 
     // init the tasks 02 to handle the OTA updates, MQTT and the shell commands
     startTask02(kynowave.getInstance(), CORE_1);

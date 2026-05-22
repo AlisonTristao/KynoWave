@@ -4,8 +4,8 @@
 // core and task settings
 #define CORE_0 0
 #define CORE_1 1
-#define TASK_STACK_SIZE_01 4096
-#define TASK_STACK_SIZE_02 4096
+#define TASK_STACK_SIZE_01 2*4096
+#define TASK_STACK_SIZE_02 2*4096
 
 // display pins
 #define TFT_CS      4
@@ -50,5 +50,10 @@
 #define LED_6       36
 #define NUM_LEDS     6
 #define LEDS_ARR {LED_1, LED_2, LED_3, LED_4, LED_5, LED_6}
+
+// Audio settings
+#define MIC_PIN 17
+#define SAMPLE_RATE 8000
+#define NUM_SAMPLES 256
 
 #endif

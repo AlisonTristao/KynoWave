@@ -44,7 +44,7 @@ bool AudioUdpStreamer::begin(
     return true;
 }
 
-uint8_t AudioUdpStreamer::captureBlock() {
+float AudioUdpStreamer::captureBlock() {
     if (!initialized_ || audioBuffer_ == nullptr) {
         return 0;
     }
@@ -95,15 +95,7 @@ uint8_t AudioUdpStreamer::captureBlock() {
     }
 
     float rms = sqrt((float)sumSq / numSamples_);
-
-    if (rms < 5)   return 0;
-    if (rms < 15)  return 1;
-    if (rms < 30)  return 2;
-    if (rms < 60)  return 3;
-    if (rms < 120) return 4;
-    if (rms < 250) return 5;
-
-    return 6;
+    return rms;
 }
 bool AudioUdpStreamer::sendBlock() {
     if (!initialized_ || audioBuffer_ == nullptr) {
@@ -123,8 +115,6 @@ bool AudioUdpStreamer::sendBlock() {
     return udp_.endPacket() == 1;
 }
 
-uint8_t AudioUdpStreamer::routine() {
-    uint8_t level = captureBlock();
-    sendBlock();
-    return level;
+float AudioUdpStreamer::routine() {
+    return captureBlock();
 }

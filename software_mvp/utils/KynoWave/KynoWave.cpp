@@ -170,11 +170,11 @@ bool KynoWave::readFromSerial(String& input) {
     return input.length() > 0;
 }
 
-void KynoWave::setLedsIntensity(uint8_t intensity) {
+void KynoWave::setLedsIntensity(float rms) {
     // convert the value to bits 
     uint8_t state = 0;
     for (uint8_t i = 0; i < NUM_LEDS; ++i)
-        if (intensity > i) 
+        if (rms > (i * 50)) 
             state |= (1 << i);
 
     // set the state 
@@ -317,6 +317,14 @@ void KynoWave::connectToWiFi() {
         // sync system clock via NTP
         configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2, NTP_SERVER_3);
     }
+
+     audioUdp.begin(
+        MIC_PIN,
+        SAMPLE_RATE,
+        NUM_SAMPLES,
+        PC_IP,
+        PC_PORT
+    );
 }
 
 bool KynoWave::getLocalTimeInfo(struct tm& out) const {
@@ -325,13 +333,16 @@ bool KynoWave::getLocalTimeInfo(struct tm& out) const {
 
 void KynoWave::routine() {
     // handle OTA and MqTT (wifi must be connected)
-    //if (wifi_state_ == WifiState::Connected) {
+    if (wifi_state_ == WifiState::Connected) {
     //    ota.handle();
     //    //MQTT_handle();
-    //}
+    
+        // send the result to the server
+        audioUdp.sendBlock();
+    }
 
     // set the leds state
-    setLedsIntensity(leds_state_);
+    setLedsIntensity(rms_value_);
 
     // check for serial input and run the command in the shell if there is any, 
     // this allows us to interact with the shell from the serial monitor while the tasks are running

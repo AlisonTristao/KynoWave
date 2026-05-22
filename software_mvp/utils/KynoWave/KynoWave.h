@@ -14,6 +14,7 @@
 #include <DisplayLCD.h>
 #include <DeviceHub.h>
 #include <OTA_connection.h>
+#include <AudioUdpStreamer.h>
 
 // define a baud rate for the serial communication
 #ifndef BAUDRATE
@@ -80,6 +81,16 @@
 #warning "MQTT_CMD_TOPIC is not defined in platformio.ini, using default: kynowave/cmd"
 #endif
 
+#ifndef PC_IP
+#define PC_IP "10.253.53.156"
+#warning "PC_IP is not defined in platformio.ini, using default: 10.253.53.156"
+#endif
+
+#ifndef PC_PORT
+#define PC_PORT 5005
+#warning "PC_IP and/or PC_PORT are not defined in platformio.ini, using default: 5005"
+#endif
+
 #include <KynoWaveConfigStore.h>
 
 class KynoWave {
@@ -97,7 +108,9 @@ class KynoWave {
         DisplayLCD display;
         WiFiClient espClient;
         PubSubClient clientMQTT;
+        AudioUdpStreamer audioUdp;
         uint8_t leds_state_ = 0; // each bit represents the state of a led, 0 means off and 1 means on
+        float rms_value_ = 0; // the current RMS value of the audio signal, this can be used to set the leds state
 
         /*
         * @brief Default output callback, 
@@ -186,7 +199,7 @@ class KynoWave {
          * @brief set the leds state
          * @param state value between 0 and NUM_LEDS, where 0 means all leds off and NUM_LEDS means all leds on
          */
-        void setLedsIntensity(uint8_t intensity);
+        void setLedsIntensity(float rms);
         void setLeds(uint8_t state);
 
     private:

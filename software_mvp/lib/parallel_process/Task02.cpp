@@ -6,15 +6,6 @@
 
 TaskHandle_t handleTask0 = NULL;
 
-#define MIC_PIN 17
-#define SAMPLE_RATE 16000
-#define NUM_SAMPLES 256
-
-#define PC_IP "10.253.53.156"
-#define PC_PORT 5005
-
-AudioUdpStreamer audioUdp;
-
 void Task02Code(void* pvParameters) {
     KynoWave* kynowave = static_cast<KynoWave*>(pvParameters);
 
@@ -24,16 +15,10 @@ void Task02Code(void* pvParameters) {
         xPortGetCoreID()
     );
 
-    bool audioOk = audioUdp.begin(
-        MIC_PIN,
-        SAMPLE_RATE,
-        NUM_SAMPLES,
-        PC_IP,
-        PC_PORT
-    );
-
     while (true) {
-        kynowave->leds_state_ = audioUdp.routine();
+        kynowave->rms_value_ = kynowave->audioUdp.routine();
+        Serial.println(kynowave->rms_value_);
+        //kynowave->setLedsIntensity(led_level);
         taskYIELD();
     }
 }

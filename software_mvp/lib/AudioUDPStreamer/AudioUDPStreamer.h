@@ -17,11 +17,10 @@ public:
         uint16_t remotePort
     );
 
-    uint8_t routine();
-
-private:
-    uint8_t captureBlock();
+    float routine();
     bool sendBlock();
+private:
+    float captureBlock();
 
     uint8_t micPin_;
     uint32_t sampleRate_;
