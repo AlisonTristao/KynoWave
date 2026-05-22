@@ -2,7 +2,7 @@
 #include <PubSubClient.h>
 #include <cstring>
 #include <time.h>
-#include "Serial.printlnh"
+#include <Arduino.h>
 
 // initialize the static members of the KynoWave class
 KynoWave* KynoWave::instante_ = nullptr;
@@ -74,24 +74,24 @@ bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
     switch (msg->type) {
         case logType::INFO:
         case logType::CMDO:
-            Serial.println("SerialSink", "%s", buffer);
+            Serial.println(buffer);
             break;
 
         case logType::WARN:
-            Serial.println("SerialSink", "%s", buffer);
+            Serial.println(buffer);
             break;
 
         case logType::ERRO:
-            Serial.println("SerialSink", "%s", buffer);
+            Serial.println(buffer);
             break;
 
         case logType::DEBG:
         case logType::I2SD:
-            Serial.println("SerialSink", "%s", buffer);
+            Serial.println(buffer);
             break;
 
         default:
-            Serial.println("SerialSink", "%s", buffer);
+            Serial.println(buffer);
             break;
     }
 
@@ -199,7 +199,6 @@ void KynoWave::setLeds(uint8_t state) {
 void KynoWave::begin() {
     // init the serial communication and print a log message to indicate that the serial is initialized
     Serial.begin(BAUDRATE);
-    Serial.printlnlevel_set("*", LOG_LEVEL);
     WiFi.setSleep(false);
 
     // setup the logger
@@ -383,7 +382,6 @@ bool KynoWave::readFromMqtt(String& input) {
     mqtt_cmd_buffer_ = "";
     mqtt_cmd_pending_ = false;
     input.trim();
-    Serial.printf("Received MQTT command: %s\n", input.c_str());
     return input.length() > 0;
 }
 
