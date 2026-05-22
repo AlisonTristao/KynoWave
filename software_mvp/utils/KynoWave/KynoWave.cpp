@@ -2,7 +2,7 @@
 #include <PubSubClient.h>
 #include <cstring>
 #include <time.h>
-#include "esp_log.h"
+#include "Serial.printlnh"
 
 // initialize the static members of the KynoWave class
 KynoWave* KynoWave::instante_ = nullptr;
@@ -74,24 +74,24 @@ bool KynoWave::SerialSink::send(const uint8_t* data, size_t len) {
     switch (msg->type) {
         case logType::INFO:
         case logType::CMDO:
-            ESP_LOGI("SerialSink", "%s", buffer);
+            Serial.println("SerialSink", "%s", buffer);
             break;
 
         case logType::WARN:
-            ESP_LOGW("SerialSink", "%s", buffer);
+            Serial.println("SerialSink", "%s", buffer);
             break;
 
         case logType::ERRO:
-            ESP_LOGE("SerialSink", "%s", buffer);
+            Serial.println("SerialSink", "%s", buffer);
             break;
 
         case logType::DEBG:
         case logType::I2SD:
-            ESP_LOGD("SerialSink", "%s", buffer);
+            Serial.println("SerialSink", "%s", buffer);
             break;
 
         default:
-            ESP_LOGI("SerialSink", "%s", buffer);
+            Serial.println("SerialSink", "%s", buffer);
             break;
     }
 
@@ -199,7 +199,7 @@ void KynoWave::setLeds(uint8_t state) {
 void KynoWave::begin() {
     // init the serial communication and print a log message to indicate that the serial is initialized
     Serial.begin(BAUDRATE);
-    esp_log_level_set("*", LOG_LEVEL);
+    Serial.printlnlevel_set("*", LOG_LEVEL);
     WiFi.setSleep(false);
 
     // setup the logger
