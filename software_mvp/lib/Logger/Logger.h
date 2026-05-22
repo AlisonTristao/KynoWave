@@ -43,7 +43,7 @@ public:
     */
     void insert_log(logType type, const String& msg);
     void insert_logf(logType type, const char* format, ...);
-    void insert_log(const int16_t *sound_data, size_t len); // add a I2SD type for sound data
+    void insert_log_int16_t(const int16_t *sound_data, size_t len); // add a I2SD type for sound data
 
     /*
     * @brief Send the log messages that are currently in the logger's buffer using the configured send callback.

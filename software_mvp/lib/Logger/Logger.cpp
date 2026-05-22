@@ -57,7 +57,7 @@ bool Logger::defaultSendCallback(const uint8_t *data, size_t len) {
     return false;
 }
 
-void Logger::insert_log(const int16_t *sound_data, size_t len) {
+void Logger::insert_log_int16_t(const int16_t *sound_data, size_t len) {
     // verify the mutex is created and try to take it before inserting the log,
     if (sound_data == nullptr || len == 0) return;
 

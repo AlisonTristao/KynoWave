@@ -148,7 +148,16 @@ bool KynoWave::sendToMQTT(const uint8_t *data, size_t len) {
 
         if (msg->type == logType::I2SD) topic += "/i2s_data";    
         else                            topic += "/status_logs"; 
-    return instante_->clientMQTT.publish(topic.c_str(), msg->content.text, static_cast<unsigned int>(len));
+
+    if (msg->type == logType::I2SD) {
+        bool ok = instante_->clientMQTT.publish(
+            topic.c_str(),
+            reinterpret_cast<const uint8_t*>(msg->content.i2sD),
+            msg->content.size
+        );
+    } else {
+        return instante_->clientMQTT.publish(topic.c_str(), msg->content.text, static_cast<unsigned int>(len));
+    }
 }
 
 // receive a string pointer
@@ -203,10 +212,10 @@ void KynoWave::begin() {
 
     // setup device hub
     hub.addOutput(&serial_sink, "serial");
-    hub.addOutput(&mqtt_sink, "mqtt");
+    //hub.addOutput(&mqtt_sink, "mqtt");
     hub.addOutput(&display_sink, "display");
     hub.addInput(&serial_source, "serial");
-    hub.addInput(&mqtt_source, "mqtt");
+    //hub.addInput(&mqtt_source, "mqtt");
 
     // setup the shell input callback    
     shell.begin();
@@ -233,9 +242,9 @@ void KynoWave::begin() {
     registerShellModules();
 
     // setup the MQTT client
-    applyMqttSettings();
-    clientMQTT.setBufferSize(256);
-    clientMQTT.setCallback(KynoWave::mqttCallback);
+    //applyMqttSettings();
+    //clientMQTT.setBufferSize(2048);
+    //clientMQTT.setCallback(KynoWave::mqttCallback);
 
     // setup OTA
     ota.begin(logger, display, config_.otaHostname.c_str(), config_.otaPassword.c_str());
@@ -318,8 +327,11 @@ void KynoWave::routine() {
     // handle OTA and MqTT (wifi must be connected)
     if (wifi_state_ == WifiState::Connected) {
         ota.handle();
-        MQTT_handle();
+        //MQTT_handle();
     }
+
+    // set the leds state
+    setLedsIntensity(leds_state_);
 
     // check for serial input and run the command in the shell if there is any, 
     // this allows us to interact with the shell from the serial monitor while the tasks are running

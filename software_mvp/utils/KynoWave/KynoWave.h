@@ -97,6 +97,7 @@ class KynoWave {
         DisplayLCD display;
         WiFiClient espClient;
         PubSubClient clientMQTT;
+        uint8_t leds_state_ = 0; // each bit represents the state of a led, 0 means off and 1 means on
 
         /*
         * @brief Default output callback, 

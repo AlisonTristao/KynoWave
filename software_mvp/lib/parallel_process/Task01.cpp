@@ -24,7 +24,8 @@ void Task01Code(void * pvParameters) {
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(kUiTickMs));
         kynowave->display.update();
-
+        kynowave->routine();
+        
         uint32_t now = millis();
 
         if (now - last_status_ms >= kStatusIntervalMs) {
