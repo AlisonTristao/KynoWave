@@ -200,6 +200,7 @@ void KynoWave::begin() {
     // init the serial communication and print a log message to indicate that the serial is initialized
     Serial.begin(BAUDRATE);
     esp_log_level_set("*", LOG_LEVEL);
+    WiFi.setSleep(false);
 
     // setup the logger
     logger.begin();
@@ -247,7 +248,7 @@ void KynoWave::begin() {
     //clientMQTT.setCallback(KynoWave::mqttCallback);
 
     // setup OTA
-    ota.begin(logger, display, config_.otaHostname.c_str(), config_.otaPassword.c_str());
+    //ota.begin(logger, display, config_.otaHostname.c_str(), config_.otaPassword.c_str());
 
     // setup the LEDs
     setup_leds();
@@ -325,10 +326,10 @@ bool KynoWave::getLocalTimeInfo(struct tm& out) const {
 
 void KynoWave::routine() {
     // handle OTA and MqTT (wifi must be connected)
-    if (wifi_state_ == WifiState::Connected) {
-        ota.handle();
-        //MQTT_handle();
-    }
+    //if (wifi_state_ == WifiState::Connected) {
+    //    ota.handle();
+    //    //MQTT_handle();
+    //}
 
     // set the leds state
     setLedsIntensity(leds_state_);

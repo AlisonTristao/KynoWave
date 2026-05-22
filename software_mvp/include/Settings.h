@@ -5,7 +5,7 @@
 #define CORE_0 0
 #define CORE_1 1
 #define TASK_STACK_SIZE_01 4096
-#define TASK_STACK_SIZE_02 32*1024
+#define TASK_STACK_SIZE_02 4096
 
 // display pins
 #define TFT_CS      4

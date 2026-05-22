@@ -125,8 +125,6 @@ bool AudioUdpStreamer::sendBlock() {
 
 uint8_t AudioUdpStreamer::routine() {
     uint8_t level = captureBlock();
-
     sendBlock();
-
     return level;
 }

@@ -8,11 +8,12 @@ UDP_PORT = 5005
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
-BLOCKSIZE = 1024  # 2048 samples por bloco, ajuste conforme necessário
+BLOCKSIZE = 256
 
-VOLUME_GAIN = 1.0  # aumente/diminua aqui: 1.0, 2.0, 3.0, 5.0
+PREBUFFER_PACKETS = 6
 
-audio_queue = queue.Queue(maxsize=100)
+audio_queue = queue.Queue(maxsize=200)
+started = False
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT))
@@ -20,8 +21,16 @@ sock.setblocking(False)
 
 
 def audio_callback(outdata, frames, time, status):
+    global started
+
     bytes_needed = frames * CHANNELS * 2
     data = bytearray()
+
+    if not started:
+        if audio_queue.qsize() < PREBUFFER_PACKETS:
+            outdata[:] = np.zeros((frames, CHANNELS), dtype=np.int16)
+            return
+        started = True
 
     while len(data) < bytes_needed:
         try:
@@ -30,14 +39,10 @@ def audio_callback(outdata, frames, time, status):
             break
 
     if len(data) < bytes_needed:
+        # mantém silêncio, mas agora deve acontecer menos
         data.extend(b"\x00" * (bytes_needed - len(data)))
 
-    samples = np.frombuffer(data[:bytes_needed], dtype=np.int16).astype(np.float32)
-
-    samples *= VOLUME_GAIN
-
-    samples = np.clip(samples, -32768, 32767).astype(np.int16)
-
+    samples = np.frombuffer(data[:bytes_needed], dtype=np.int16)
     outdata[:] = samples.reshape(-1, CHANNELS)
 
 
@@ -51,9 +56,7 @@ stream = sd.OutputStream(
 
 stream.start()
 
-print(f"Escutando UDP na porta {UDP_PORT}...")
-print(f"Ganho de volume: {VOLUME_GAIN}x")
-print("Ctrl+C para parar")
+print("Recebendo UDP...")
 
 try:
     while True:
@@ -69,7 +72,7 @@ try:
                 audio_queue.get_nowait()
                 audio_queue.put_nowait(data)
 
-            print(f"Pacote {len(data)} bytes de {addr}")
+            print("fila:", audio_queue.qsize(), "pacote:", len(data))
 
         except BlockingIOError:
             sd.sleep(1)

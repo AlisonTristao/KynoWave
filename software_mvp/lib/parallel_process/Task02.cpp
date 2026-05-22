@@ -8,7 +8,7 @@ TaskHandle_t handleTask0 = NULL;
 
 #define MIC_PIN 17
 #define SAMPLE_RATE 16000
-#define NUM_SAMPLES 512
+#define NUM_SAMPLES 256
 
 #define PC_IP "10.253.53.156"
 #define PC_PORT 5005
