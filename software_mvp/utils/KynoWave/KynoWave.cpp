@@ -174,7 +174,7 @@ void KynoWave::setLedsIntensity(float rms) {
     // convert the value to bits 
     uint8_t state = 0;
     for (uint8_t i = 0; i < NUM_LEDS; ++i)
-        if (rms > (i * 50)) 
+        if (rms > (i * 9)) 
             state |= (1 << i);
 
     // set the state 

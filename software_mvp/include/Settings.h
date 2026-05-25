@@ -53,7 +53,7 @@
 
 // Audio settings
 #define MIC_PIN 17
-#define SAMPLE_RATE 8000
+#define SAMPLE_RATE 16000
 #define NUM_SAMPLES 256
 
 #endif

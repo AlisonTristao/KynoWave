@@ -6,7 +6,7 @@ import sounddevice as sd
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 
-SAMPLE_RATE = 8000
+SAMPLE_RATE = 16000
 CHANNELS = 1
 BLOCKSIZE = 512
 

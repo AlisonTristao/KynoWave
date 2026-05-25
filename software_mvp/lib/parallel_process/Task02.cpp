@@ -17,7 +17,7 @@ void Task02Code(void* pvParameters) {
 
     while (true) {
         kynowave->rms_value_ = kynowave->audioUdp.routine();
-        Serial.println(kynowave->rms_value_);
+        //Serial.println(kynowave->rms_value_);
         //kynowave->setLedsIntensity(led_level);
         taskYIELD();
     }
