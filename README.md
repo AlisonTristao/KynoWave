@@ -2,7 +2,11 @@
 
 ![Renderização do Projeto](wave%20-%20renderizado.png)
 
-O **KynoWave** é um projeto de hardware focado na monitorização de ruído acústico em ambientes. Desenvolvido em torno do microcontrolador ESP32-S3.
+O **KynoWave** é um projeto de hardware focado na monitorização de ruído acústico em ambientes. Desenvolvido em torno do microcontrolador ESP32-S3. 
+
+O projeto foi desenvolvido para participar do desafio da Maratona de Inovação 2026/1, realizada no evento Arena Ação Jr.
+
+Todo o desenvolvimento de hardware e software foi realizado em menos de um mês, dentro do prazo proposto pelo desafio, e o projeto conquistou o 2º lugar na competição.
 
 ## Características Principais
 
