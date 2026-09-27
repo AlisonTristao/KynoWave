@@ -7,7 +7,8 @@ inline const btpdev::DeviceConfig device_config = {
     // The native USB port: no key, no Wi-Fi. TCP and BLE come later
     // (docs/PLANO_BTPDEVICE.md, etapa 4).
     .link = btpdev::Link::Serial,
-    .memory = btpdev::Memory::Small,
+    // Medium: a 16 KB send queue, room for several 2 KB audio blocks.
+    .memory = btpdev::Memory::Medium,
     .source_info = {{"board", "Board", "KynoWave prototype"},
                     {"microphone", "Microphone", "MAX4466 (ADC)"}},
 };

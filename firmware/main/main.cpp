@@ -1,8 +1,10 @@
-// KynoWave -- sound level to TraceView through BTPDevice.
+// KynoWave -- the microphone to TraceView through BTPDevice: the live audio
+// (stream "audio.pcm") and the sound level ("audio.level").
 //
 //   1. pio run -t upload, plug the board's native USB port into the PC.
 //   2. In TraceView, add "kynowave" (Serial, automatic).
-//   3. Plot "audio.level"; terminal: `audio -stats`, `btp -status`.
+//   3. Add an Audio Spectrum widget on "audio.pcm" (plays it and shows the
+//      FFT), plot "audio.level"; terminal: `audio -stats`, `btp -topics`.
 
 #include <cstdio>
 
@@ -28,6 +30,11 @@ namespace {
 
 constexpr const char* kTag = "kynowave";
 constexpr int kAppCore = 1;   // core 0 is BTPDevice's and the radio's
+
+// The audio task's blocks go straight into the library's stream queue.
+bool stream_block(const int16_t* samples, size_t count, uint32_t rate_hz, uint64_t timestamp_us) {
+    return device.write_stream(kAudioStream, samples, count, rate_hz, timestamp_us);
+}
 
 const char* link_label(btpdev::Link link) {
     switch (link) {
@@ -73,7 +80,7 @@ extern "C" void app_main() {
     if (leds.begin() != ESP_OK) ESP_LOGW(kTag, "no LEDs");
     if (display.begin(kAppCore) != ESP_OK) ESP_LOGW(kTag, "no display");
     display.log("KynoWave");
-    if (audio.begin(board::kMic, kAppCore) != ESP_OK) display.log("microfone: erro no ADC");
+    if (audio.begin(board::kMic, kAppCore, stream_block) != ESP_OK) display.log("microfone: erro no ADC");
 
     if (device.begin(app_commands, app_topics) != ESP_OK) {
         // The cause is in the log and in last_error(); the level still shows here.

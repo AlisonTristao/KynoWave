@@ -1,7 +1,6 @@
 #include "audio/Audio.h"
 
 #include <cmath>
-#include <cstdlib>
 
 #include <esp_log.h>
 #include <esp_timer.h>
@@ -10,40 +9,46 @@ namespace {
 
 constexpr const char* kTag = "audio";
 constexpr float kPi = 3.14159265f;
-constexpr float kLowPassHz = 3000.0f;
-constexpr float kDcAlpha = 0.001f;   // DC tracker: ~1000 samples
+constexpr float kLowPassHz = 3000.0f;  // the level's voice band
+constexpr float kDcHz = 5.0f;          // DC tracker corner: keeps everything audible
+// DMA frames the driver can hold while the task is busy (~50 ms at 83 kHz).
+constexpr uint32_t kPoolFrames = 4;
+constexpr uint32_t kReadTimeoutMs = 200;
+
+// One-pole low-pass coefficient for corner `hz` at `rate`.
+float one_pole(float hz, uint32_t rate) {
+    const float dt = 1.0f / static_cast<float>(rate);
+    const float rc = 1.0f / (2.0f * kPi * hz);
+    return dt / (rc + dt);
+}
 
 }  // namespace
 
-esp_err_t Audio::begin(gpio_num_t pin, int core) {
-    adc_unit_t unit_id = ADC_UNIT_1;
-    esp_err_t err = adc_oneshot_io_to_channel(pin, &unit_id, &channel_);
+esp_err_t Audio::begin(gpio_num_t pin, int core, BlockFn on_block) {
+    on_block_ = on_block;
+    esp_err_t err = adc_continuous_io_to_channel(pin, &unit_, &channel_);
+    if (err != ESP_OK || unit_ != ADC_UNIT_1) {
+        ESP_LOGE(kTag, "GPIO%d is not an ADC1 pin (only ADC1 has DMA)", pin);
+        return err != ESP_OK ? err : ESP_ERR_INVALID_ARG;
+    }
+    adc_continuous_handle_cfg_t handle_config = {};
+    handle_config.max_store_buf_size = sizeof(raw_) * kPoolFrames;
+    handle_config.conv_frame_size = sizeof(raw_);
+    err = adc_continuous_new_handle(&handle_config, &adc_);
     if (err != ESP_OK) {
-        ESP_LOGE(kTag, "GPIO%d is not an ADC pin", pin);
+        ESP_LOGE(kTag, "ADC continuous mode init failed (%s)", esp_err_to_name(err));
         return err;
     }
-    adc_oneshot_unit_init_cfg_t unit_config = {};
-    unit_config.unit_id = unit_id;
-    err = adc_oneshot_new_unit(&unit_config, &unit_);
-    if (err != ESP_OK) {
-        ESP_LOGE(kTag, "ADC%d init failed (%s)", unit_id + 1, esp_err_to_name(err));
-        return err;
-    }
-    adc_oneshot_chan_cfg_t channel_config = {};
-    channel_config.atten = ADC_ATTEN_DB_12;       // full 0..3.3 V swing of the MAX4466
-    channel_config.bitwidth = ADC_BITWIDTH_12;
-    err = adc_oneshot_config_channel(unit_, channel_, &channel_config);
-    if (err != ESP_OK) {
-        ESP_LOGE(kTag, "ADC channel config failed (%s)", esp_err_to_name(err));
-        return err;
-    }
+    adc_continuous_evt_cbs_t callbacks = {};
+    callbacks.on_pool_ovf = &Audio::on_pool_overflow;
+    adc_continuous_register_event_callbacks(adc_, &callbacks, this);
+
     if (xTaskCreatePinnedToCore(&Audio::task_entry, "audio", 4096, this, 5, &task_, core) != pdPASS) {
         ESP_LOGE(kTag, "could not create the audio task");
         return ESP_ERR_NO_MEM;
     }
-    ESP_LOGI(kTag, "microphone on GPIO%d (ADC%d channel %d), %lu Hz, %u-sample blocks every %lu ms",
-             pin, unit_id + 1, channel_, static_cast<unsigned long>(kDefaultRateHz), kBlockSamples,
-             static_cast<unsigned long>(kPeriodMs));
+    ESP_LOGI(kTag, "microphone on GPIO%d (ADC1 channel %d), %lu Hz continuous, %u-sample blocks", pin,
+             channel_, static_cast<unsigned long>(rate_hz_.load()), kBlockSamples);
     return ESP_OK;
 }
 
@@ -54,66 +59,122 @@ bool Audio::set_rate(uint32_t hz) {
 }
 
 Audio::Stats Audio::stats() const {
-    return Stats{rate_hz_.load(std::memory_order_relaxed), actual_rate_hz_.load(std::memory_order_relaxed),
-                 blocks_.load(std::memory_order_relaxed), read_errors_.load(std::memory_order_relaxed),
-                 block_us_.load(std::memory_order_relaxed)};
+    return Stats{rate_hz_.load(std::memory_order_relaxed),
+                 actual_rate_hz_.load(std::memory_order_relaxed),
+                 blocks_.load(std::memory_order_relaxed),
+                 blocks_streamed_.load(std::memory_order_relaxed),
+                 overflows_.load(std::memory_order_relaxed),
+                 read_errors_.load(std::memory_order_relaxed)};
+}
+
+bool IRAM_ATTR Audio::on_pool_overflow(adc_continuous_handle_t, const adc_continuous_evt_data_t*, void* self) {
+    static_cast<Audio*>(self)->overflows_.fetch_add(1, std::memory_order_relaxed);
+    return false;
 }
 
 void Audio::task_entry(void* self) { static_cast<Audio*>(self)->run(); }
 
+esp_err_t Audio::start_adc(uint32_t rate) {
+    if (running_rate_ != 0) adc_continuous_stop(adc_);
+    running_rate_ = 0;
+
+    adc_digi_pattern_config_t pattern = {};
+    pattern.atten = ADC_ATTEN_DB_12;  // the full 0..3.3 V swing of the MAX4466
+    pattern.channel = channel_;
+    pattern.unit = unit_;
+    pattern.bit_width = SOC_ADC_DIGI_MAX_BITWIDTH;
+    adc_continuous_config_t config = {};
+    config.pattern_num = 1;
+    config.adc_pattern = &pattern;
+    config.sample_freq_hz = rate;
+    config.conv_mode = ADC_CONV_SINGLE_UNIT_1;
+    esp_err_t err = adc_continuous_config(adc_, &config);
+    if (err == ESP_OK) err = adc_continuous_start(adc_);
+    if (err != ESP_OK) {
+        ESP_LOGE(kTag, "ADC start at %lu Hz failed (%s)", static_cast<unsigned long>(rate), esp_err_to_name(err));
+        return err;
+    }
+    running_rate_ = rate;
+    counted_ = 0;
+    started_us_ = esp_timer_get_time();
+    actual_rate_hz_.store(0, std::memory_order_relaxed);
+    dc_alpha_ = one_pole(kDcHz, rate);
+    lp_alpha_ = one_pole(kLowPassHz, rate);
+    level_sum_sq_ = 0.0;
+    level_peak_ = 0.0f;
+    level_count_ = 0;
+    return ESP_OK;
+}
+
 void Audio::run() {
-    TickType_t wake = xTaskGetTickCount();
     for (;;) {
-        read_block();
-        // Sleep the rest of the period: the core is free until the next block.
-        vTaskDelayUntil(&wake, pdMS_TO_TICKS(kPeriodMs));
+        const uint32_t wanted = rate_hz_.load(std::memory_order_relaxed);
+        if (wanted != running_rate_ && start_adc(wanted) != ESP_OK) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+        uint32_t got = 0;
+        esp_err_t err = adc_continuous_read(adc_, raw_, sizeof(raw_), &got, kReadTimeoutMs);
+        if (err != ESP_OK) {
+            read_errors_.fetch_add(1, std::memory_order_relaxed);
+            continue;
+        }
+        uint32_t parsed = 0;
+        if (adc_continuous_parse_data(adc_, raw_, got, parsed_, &parsed) != ESP_OK || parsed == 0) {
+            read_errors_.fetch_add(1, std::memory_order_relaxed);
+            continue;
+        }
+        process(parsed_, parsed);
     }
 }
 
-void Audio::read_block() {
-    const uint32_t rate = rate_hz_.load(std::memory_order_relaxed);
-    const float dt = 1.0f / static_cast<float>(rate);
-    const float rc = 1.0f / (2.0f * kPi * kLowPassHz);
-    const float alpha = dt / (rc + dt);
+void Audio::process(const adc_continuous_data_t* data, uint32_t count) {
+    const int64_t now = esp_timer_get_time();
+    counted_ += count;
+    const int64_t elapsed = now - started_us_;
+    // Measured over at least half a second; the nominal rate until then.
+    uint32_t rate = running_rate_;
+    if (elapsed > 500000) {
+        rate = static_cast<uint32_t>((counted_ * 1000000ULL + static_cast<uint64_t>(elapsed) / 2U) /
+                                     static_cast<uint64_t>(elapsed));
+        actual_rate_hz_.store(rate, std::memory_order_relaxed);
+    }
+    const uint32_t level_samples = running_rate_ * kPeriodMs / 1000U;
 
-    double sum_sq = 0.0;
-    float peak = 0.0f;
-    uint16_t good = 0;
-    const int64_t start = esp_timer_get_time();
+    size_t n = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+        if (!data[i].valid || data[i].channel != channel_) continue;
+        const float raw = static_cast<float>(data[i].raw_data);
+        dc_ += dc_alpha_ * (raw - dc_);
+        const float x = raw - dc_;
 
-    for (uint32_t i = 0; i < kBlockSamples; ++i) {
-        // Pace each sample at its own instant (no drift across the block).
-        const int64_t due = start + static_cast<int64_t>(i) * 1000000LL / rate;
-        while (esp_timer_get_time() < due) {
-        }
-        int raw = 0;
-        if (adc_oneshot_read(unit_, channel_, &raw) != ESP_OK) {
-            read_errors_.fetch_add(1, std::memory_order_relaxed);   // ADC2 taken by Wi-Fi
-            continue;
-        }
-        dc_ += kDcAlpha * (static_cast<float>(raw) - dc_);
-        const float x = static_cast<float>(raw) - dc_;
-        lp1_ += alpha * (x - lp1_);
-        lp2_ += alpha * (lp1_ - lp2_);
-        lp3_ += alpha * (lp2_ - lp3_);
-        sum_sq += static_cast<double>(lp3_) * lp3_;
+        float s = std::nearbyint(x);
+        if (s > kFullScale - 1) s = kFullScale - 1;
+        if (s < -kFullScale) s = -kFullScale;
+        block_[n++] = static_cast<int16_t>(s);
+
+        lp1_ += lp_alpha_ * (x - lp1_);
+        lp2_ += lp_alpha_ * (lp1_ - lp2_);
+        lp3_ += lp_alpha_ * (lp2_ - lp3_);
+        level_sum_sq_ += static_cast<double>(lp3_) * lp3_;
         const float magnitude = std::fabs(lp3_);
-        if (magnitude > peak) peak = magnitude;
-        ++good;
+        if (magnitude > level_peak_) level_peak_ = magnitude;
+        if (++level_count_ >= level_samples) finish_level();
     }
+    blocks_.fetch_add(1, std::memory_order_relaxed);
+    if (n == 0 || on_block_ == nullptr) return;
+    // The block's first sample was taken `n` samples before now.
+    const uint64_t first_us = static_cast<uint64_t>(now) - static_cast<uint64_t>(n) * 1000000ULL / rate;
+    if (on_block_(block_, n, rate, first_us)) blocks_streamed_.fetch_add(1, std::memory_order_relaxed);
+}
 
-    const int64_t elapsed = esp_timer_get_time() - start;
-    block_us_.store(static_cast<uint32_t>(elapsed), std::memory_order_relaxed);
-    if (elapsed > 0) {
-        actual_rate_hz_.store(static_cast<uint32_t>(kBlockSamples * 1000000LL / elapsed),
-                              std::memory_order_relaxed);
-    }
-    if (good == 0) return;   // keep the last level
-
-    const float rms = static_cast<float>(std::sqrt(sum_sq / good));
+void Audio::finish_level() {
+    const float rms = static_cast<float>(std::sqrt(level_sum_sq_ / level_count_));
     const float dbfs = rms > 0.0f ? 20.0f * std::log10(rms / kFullScaleRms) : kFloorDbfs;
     rms_.store(rms, std::memory_order_relaxed);
     dbfs_.store(dbfs < kFloorDbfs ? kFloorDbfs : dbfs, std::memory_order_relaxed);
-    peak_.store(static_cast<uint16_t>(peak > 2048.0f ? 2048.0f : peak), std::memory_order_relaxed);
-    blocks_.fetch_add(1, std::memory_order_relaxed);
+    peak_.store(static_cast<uint16_t>(level_peak_ > 2048.0f ? 2048.0f : level_peak_), std::memory_order_relaxed);
+    level_sum_sq_ = 0.0;
+    level_peak_ = 0.0f;
+    level_count_ = 0;
 }

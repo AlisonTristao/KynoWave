@@ -3,10 +3,10 @@
 
 static uint8_t audio_stats() {
     const Audio::Stats s = audio.stats();
-    btpdev::printf("rate=%lu actual=%lu blocks=%lu block_us=%lu read_errors=%lu\n",
+    btpdev::printf("rate=%lu actual=%lu blocks=%lu streamed=%lu overflows=%lu read_errors=%lu\n",
                    static_cast<unsigned long>(s.rate_hz), static_cast<unsigned long>(s.actual_rate_hz),
-                   static_cast<unsigned long>(s.blocks), static_cast<unsigned long>(s.block_us),
-                   static_cast<unsigned long>(s.read_errors));
+                   static_cast<unsigned long>(s.blocks), static_cast<unsigned long>(s.blocks_streamed),
+                   static_cast<unsigned long>(s.overflows), static_cast<unsigned long>(s.read_errors));
     btpdev::printf("rms=%.1f dbfs=%.1f peak=%u\n", static_cast<double>(audio.rms()),
                    static_cast<double>(audio.dbfs()), static_cast<unsigned>(audio.peak()));
     return RESULT_OK;
@@ -47,9 +47,9 @@ static uint8_t display_backlight(uint8_t on) {
 }
 
 void app_commands(btpdev::Commands& c) {
-    c.module("audio", "Microphone level")
+    c.module("audio", "Microphone")
         .add("stats", audio_stats, "audio -stats")
-        .add("rate", audio_rate, "audio -rate <2000..16000 Hz>");
+        .add("rate", audio_rate, "audio -rate <8000..83333 Hz>");
     c.module("leds", "Front LEDs")
         .add("vu", leds_vu, "leds -vu <0|1>: VU meter on/off")
         .add("step", leds_step, "leds -step <counts>: RMS per LED in the VU meter")

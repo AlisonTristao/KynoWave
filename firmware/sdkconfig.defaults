@@ -2,11 +2,15 @@ CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+# app_main runs BtpDevice::begin() and then the UI loop: more than the 3.5 KB default.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 
 # BTPDevice's Serial link: TinyUSB CDC on the native USB port. The console
 # (ESP_LOGx) goes to UART0 instead -- the tx/rx pins on the side connector.
 CONFIG_TINYUSB_CDC_ENABLED=y
 CONFIG_TINYUSB_CDC_COUNT=1
+# The audio stream is ~170 KB/s: a CDC TX FIFO of a few frames keeps USB busy.
+CONFIG_TINYUSB_CDC_TX_BUFSIZE=8192
 CONFIG_ESP_CONSOLE_UART_DEFAULT=y
 
 # LVGL 8 for the ST7735 (128x160, RGB565 sent big-endian over SPI).
