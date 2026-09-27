@@ -65,9 +65,12 @@ Nada de lógica dentro de uma classe-deus: um módulo por coisa (`Audio`,
 ## 4. Etapas
 
 ### Etapa 0: esqueleto ESP-IDF
-- [ ] `firmware/` com `platformio.ini` (espidf, ESP32-S3, 16 MB), `CMakeLists.txt` com os componentes irmãos, `partitions.csv` (app + LittleFS `storage`), `sdkconfig.defaults` (TinyUSB CDC, console UART0, NimBLE desligado por enquanto).
-- [ ] `main/btp/` com o dispositivo `kynowave`, link Serial, preset `Small`.
-- **Pronto quando:** compila e sobe com um tópico de teste (contador).
+- [x] `firmware/` com `platformio.ini` (espidf, ESP32-S3, 16 MB), `CMakeLists.txt` com os componentes irmãos, `partitions.csv` (app + LittleFS `storage`), `sdkconfig.defaults` (TinyUSB CDC, console UART0, NimBLE desligado por enquanto).
+- [x] `main/btp/` com o dispositivo `kynowave`, link Serial, preset `Small`.
+- **Pronto quando:** compila e sobe com um tópico de teste (contador). *Compila; o tópico já é o do microfone.*
+
+> Etapas 0, 2 e 3 escritas e compilando (ESP-IDF 6.0.1): falta tudo o que é
+> "pronto quando" em hardware -- é a etapa 1.
 
 ### Etapa 1: BTPDevice no hardware (Serial) — o teste da lib
 - [ ] TraceView acha a porta pelo nome, abre sessão, terminal responde (`help`, `btp -status`).
@@ -76,13 +79,13 @@ Nada de lógica dentro de uma classe-deus: um módulo por coisa (`Audio`,
 - **Pronto quando:** 10 min de sessão estável com o TraceView.
 
 ### Etapa 2: microfone
-- [ ] `Audio`: task no core 1, `adc_oneshot` (ADC2 canal 6 = GPIO17), amostragem por tempo sem busy-wait de núcleo inteiro (espera curta por bloco + `vTaskDelay` entre blocos), filtro portado do `AudioUdpStreamer`.
-- [ ] Tópico `audio.level` e `audio -stats`; LEDs como VU (portado de `setLedsIntensity`).
+- [x] `Audio`: task no core 1, `adc_oneshot` (ADC2 canal 6 = GPIO17), amostragem por tempo sem busy-wait de núcleo inteiro (espera curta por bloco + `vTaskDelay` entre blocos), filtro portado do `AudioUdpStreamer`.
+- [x] Tópico `audio.level` e `audio -stats`; LEDs como VU (portado de `setLedsIntensity`).
 - **Pronto quando:** o TraceView plota a intensidade reagindo a som, sem travar o terminal.
 
 ### Etapa 3: display
-- [ ] Driver ST7735 (`esp_lcd` panel IO SPI: CS 4, RST 5, DC 6, MOSI 7, SCK 15, BL 16) + LVGL 8.
-- [ ] UI portada da `DisplayLCD`: barra de status (link e sessão da BTPDevice no lugar do MQTT; hora quando houver), nível do microfone, área de log.
+- [x] Driver ST7735 (`esp_lcd` panel IO SPI: CS 4, RST 5, DC 6, MOSI 7, SCK 15, BL 16) + LVGL 8.
+- [x] UI portada da `DisplayLCD`: barra de status (link e sessão da BTPDevice no lugar do MQTT; hora quando houver), nível do microfone, área de log.
 - **Pronto quando:** a tela mostra o estado da BTPDevice e o nível ao vivo.
 
 ### Etapa 4: TCP e BLE

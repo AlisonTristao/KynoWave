@@ -1,0 +1,7 @@
+.pio/
+managed_components/
+sdkconfig.esp32-s3
+sdkconfig.old
+*.key
+data/wifi.txt
+*.log
