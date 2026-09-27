@@ -1,7 +1,6 @@
 // Sound level from the MAX4466 microphone.
 //
-// The ESP32-S3 has no DMA (continuous) mode on ADC2, where the microphone is,
-// so a task on core 1 reads blocks with adc_oneshot: kBlockSamples samples
+// A task on core 1 reads blocks with adc_oneshot: kBlockSamples samples
 // paced at the sample rate (16 ms at 16 kHz), then sleeps until the next
 // period (kPeriodMs). Each block gives one level -- 20 per second -- and the
 // core stays free about two thirds of the time.
@@ -9,8 +8,10 @@
 // Per sample: DC removal (slow average) and a 3-stage low-pass at 3 kHz (the
 // voice band), as the MVP firmware did; per block: RMS and peak.
 //
-// ADC2 is shared with Wi-Fi: with Wi-Fi on (the TCP link), a read can fail;
-// failures are counted (stats().read_errors) and the sample is skipped.
+// A failed read is counted (stats().read_errors) and the sample skipped. On
+// ADC1 (board::kMic) that should never happen; on ADC2 it does whenever Wi-Fi
+// is on. The ADC1 also has a DMA (continuous) mode that could replace the
+// paced reads -- not needed for a level.
 //
 // Readers (any task) get the last block's values; nothing blocks.
 

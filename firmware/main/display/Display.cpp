@@ -17,6 +17,8 @@ constexpr int kTopBarHeight = 18;
 constexpr uint32_t kTickMs = 10;          // LVGL timer handler period
 constexpr uint32_t kRefreshMs = 100;      // level and status: 10 Hz
 constexpr float kLevelMinDb = -90.0f;
+// At least one tick: with the default 100 Hz tick, pdMS_TO_TICKS(5) is 0.
+constexpr TickType_t kLockWait = pdMS_TO_TICKS(10) > 0 ? pdMS_TO_TICKS(10) : 1;
 
 lv_color_t session_color(Display::Session session) {
     switch (session) {
@@ -80,7 +82,7 @@ esp_err_t Display::begin(int core) {
 }
 
 void Display::set_status(const Status& status) {
-    if (xSemaphoreTake(lock_, pdMS_TO_TICKS(5)) != pdTRUE) return;
+    if (xSemaphoreTake(lock_, kLockWait) != pdTRUE) return;
     status_ = status;
     status_dirty_ = true;
     xSemaphoreGive(lock_);
@@ -88,7 +90,7 @@ void Display::set_status(const Status& status) {
 
 void Display::log(const char* text) {
     if (text == nullptr || lock_ == nullptr) return;
-    if (xSemaphoreTake(lock_, pdMS_TO_TICKS(5)) != pdTRUE) return;
+    if (xSemaphoreTake(lock_, kLockWait) != pdTRUE) return;
     if (line_count_ == kLogLines) {
         std::memmove(lines_[0], lines_[1], sizeof(lines_[0]) * (kLogLines - 1));
         --line_count_;

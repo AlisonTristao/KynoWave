@@ -13,9 +13,10 @@ constexpr gpio_num_t kLcdMosi = GPIO_NUM_7;
 constexpr gpio_num_t kLcdSck = GPIO_NUM_15;
 constexpr gpio_num_t kLcdBacklight = GPIO_NUM_16;
 
-// MAX4466 microphone amplifier output, straight into the ADC (ADC2 channel 6:
-// shared with Wi-Fi, see audio/Audio.h).
-constexpr gpio_num_t kMic = GPIO_NUM_17;
+// MAX4466 microphone amplifier output, straight into the ADC. On the prototype
+// the trace goes to GPIO17 (ADC2, shared with Wi-Fi); a jumper takes it to
+// GPIO1 (ADC1 channel 0), which Wi-Fi never touches. GPIO17 is left alone.
+constexpr gpio_num_t kMic = GPIO_NUM_1;
 
 // The six front LEDs, left to right (the VU meter).
 constexpr gpio_num_t kLeds[] = {GPIO_NUM_21, GPIO_NUM_47, GPIO_NUM_48,

@@ -48,9 +48,9 @@ A porta USB nativa é o link da BTPDevice com o TraceView (não é console).
 | `app_main` | — | A cada 50 ms: LEDs, nível e estado do link na tela |
 | `btpdev_comms`, `btpdev_shell` | 0 / — | BTPDevice: link, sessão, tópicos, comandos |
 
-O microfone está no ADC2 (GPIO17), que não tem modo DMA no ESP32-S3 e é
-compartilhado com o Wi-Fi: no link TCP uma leitura pode falhar
-(`audio -stats`, `read_errors`).
+O microfone é lido no GPIO1 (ADC1). No protótipo a trilha do MAX4466 vai
+para o GPIO17 (ADC2, compartilhado com o Wi-Fi); um jumper leva o sinal ao
+GPIO1.
 
 ## Wi-Fi e chave (links TCP e BLE)
 
