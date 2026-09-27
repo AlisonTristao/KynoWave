@@ -9,8 +9,9 @@ namespace {
 
 constexpr const char* kTag = "audio";
 constexpr float kPi = 3.14159265f;
-constexpr float kLowPassHz = 3000.0f;  // the level's voice band
-constexpr float kDcHz = 5.0f;          // DC tracker corner: keeps everything audible
+constexpr float kDcHz = 5.0f;  // DC tracker corner, below anything audible
+// A 4th-order Butterworth as two second-order sections.
+constexpr float kButterworthQ[2] = {0.54119610f, 1.30656296f};
 // DMA frames the driver can hold while the task is busy (~50 ms at 83 kHz).
 constexpr uint32_t kPoolFrames = 4;
 constexpr uint32_t kReadTimeoutMs = 200;
@@ -54,8 +55,43 @@ esp_err_t Audio::begin(gpio_num_t pin, int core, BlockFn on_block) {
 
 bool Audio::set_rate(uint32_t hz) {
     if (hz < kMinRateHz || hz > kMaxRateHz) return false;
+    const uint16_t low_pass = static_cast<uint16_t>(band_.load(std::memory_order_relaxed) & 0xFFFFu);
+    if (low_pass != 0 && low_pass * 2U >= hz) return false;  // the band must fit the new rate
     rate_hz_.store(hz, std::memory_order_relaxed);
     return true;
+}
+
+bool Audio::set_band(uint16_t high_pass_hz, uint16_t low_pass_hz) {
+    if (high_pass_hz != 0 && low_pass_hz != 0 && high_pass_hz >= low_pass_hz) return false;
+    if (low_pass_hz != 0 && low_pass_hz * 2U >= rate_hz_.load(std::memory_order_relaxed)) return false;
+    band_.store((uint32_t{high_pass_hz} << 16) | low_pass_hz, std::memory_order_relaxed);
+    return true;
+}
+
+void Audio::configure_band(uint32_t band, uint32_t rate) {
+    const float high_pass = static_cast<float>(band >> 16);
+    const float low_pass = static_cast<float>(band & 0xFFFFu);
+    high_pass_on_ = high_pass > 0.0f;
+    low_pass_on_ = low_pass > 0.0f;
+    for (int i = 0; i < 2; ++i) {
+        if (high_pass_on_) {
+            const float w0 = 2.0f * kPi * high_pass / static_cast<float>(rate);
+            const float alpha = std::sin(w0) / (2.0f * kButterworthQ[i]);
+            const float c = std::cos(w0);
+            const float a0 = 1.0f + alpha;
+            high_pass_[i] = Biquad{(1.0f + c) / 2.0f / a0, -(1.0f + c) / a0, (1.0f + c) / 2.0f / a0,
+                                   -2.0f * c / a0, (1.0f - alpha) / a0};
+        }
+        if (low_pass_on_) {
+            const float w0 = 2.0f * kPi * low_pass / static_cast<float>(rate);
+            const float alpha = std::sin(w0) / (2.0f * kButterworthQ[i]);
+            const float c = std::cos(w0);
+            const float a0 = 1.0f + alpha;
+            low_pass_[i] = Biquad{(1.0f - c) / 2.0f / a0, (1.0f - c) / a0, (1.0f - c) / 2.0f / a0,
+                                  -2.0f * c / a0, (1.0f - alpha) / a0};
+        }
+    }
+    running_band_ = band;
 }
 
 Audio::Stats Audio::stats() const {
@@ -64,7 +100,9 @@ Audio::Stats Audio::stats() const {
                  blocks_.load(std::memory_order_relaxed),
                  blocks_streamed_.load(std::memory_order_relaxed),
                  overflows_.load(std::memory_order_relaxed),
-                 read_errors_.load(std::memory_order_relaxed)};
+                 read_errors_.load(std::memory_order_relaxed),
+                 static_cast<uint16_t>(band_.load(std::memory_order_relaxed) >> 16),
+                 static_cast<uint16_t>(band_.load(std::memory_order_relaxed) & 0xFFFFu)};
 }
 
 bool IRAM_ATTR Audio::on_pool_overflow(adc_continuous_handle_t, const adc_continuous_evt_data_t*, void* self) {
@@ -99,7 +137,7 @@ esp_err_t Audio::start_adc(uint32_t rate) {
     started_us_ = esp_timer_get_time();
     actual_rate_hz_.store(0, std::memory_order_relaxed);
     dc_alpha_ = one_pole(kDcHz, rate);
-    lp_alpha_ = one_pole(kLowPassHz, rate);
+    configure_band(band_.load(std::memory_order_relaxed), rate);
     level_sum_sq_ = 0.0;
     level_peak_ = 0.0f;
     level_count_ = 0;
@@ -140,24 +178,25 @@ void Audio::process(const adc_continuous_data_t* data, uint32_t count) {
         actual_rate_hz_.store(rate, std::memory_order_relaxed);
     }
     const uint32_t level_samples = running_rate_ * kPeriodMs / 1000U;
+    const uint32_t band = band_.load(std::memory_order_relaxed);
+    if (band != running_band_) configure_band(band, running_rate_);
 
     size_t n = 0;
     for (uint32_t i = 0; i < count; ++i) {
         if (!data[i].valid || data[i].channel != channel_) continue;
         const float raw = static_cast<float>(data[i].raw_data);
         dc_ += dc_alpha_ * (raw - dc_);
-        const float x = raw - dc_;
+        float x = raw - dc_;
+        if (high_pass_on_) x = high_pass_[1].run(high_pass_[0].run(x));
+        if (low_pass_on_) x = low_pass_[1].run(low_pass_[0].run(x));
 
         float s = std::nearbyint(x);
         if (s > kFullScale - 1) s = kFullScale - 1;
         if (s < -kFullScale) s = -kFullScale;
         block_[n++] = static_cast<int16_t>(s);
 
-        lp1_ += lp_alpha_ * (x - lp1_);
-        lp2_ += lp_alpha_ * (lp1_ - lp2_);
-        lp3_ += lp_alpha_ * (lp2_ - lp3_);
-        level_sum_sq_ += static_cast<double>(lp3_) * lp3_;
-        const float magnitude = std::fabs(lp3_);
+        level_sum_sq_ += static_cast<double>(x) * x;
+        const float magnitude = std::fabs(x);
         if (magnitude > level_peak_) level_peak_ = magnitude;
         if (++level_count_ >= level_samples) finish_level();
     }
