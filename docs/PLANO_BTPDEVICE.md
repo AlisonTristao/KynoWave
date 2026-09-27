@@ -1,6 +1,7 @@
 # KynoWave + BTPDevice: plano
 
-Branch: `btpdevice-test`. Objetivo duplo: reescrever o firmware do KynoWave
+Branch: `btpdevice-test`. Hardware: o protótipo, com um microfone MAX4466
+ligado direto no ADC (GPIO17). Objetivo duplo: reescrever o firmware do KynoWave
 limpo, em ESP-IDF, e usar a placa como **primeiro teste em hardware da
 [BTPDevice](https://github.com/AlisonTristao/BTPDevice)** — o TraceView
 recebendo a intensidade do microfone.
@@ -27,7 +28,7 @@ status + área de log, o ícone de Wi-Fi) e o filtro do microfone (remoção de 
 | K2 | Mesmo layout dos exemplos da BTPDevice: `main/btp/{btp_device.h, btp_storage.h, btp_commands.cpp, btp_topics.cpp}` | O KynoWave vira o exemplo "de verdade" da lib |
 | K3 | BTPDevice, BTP e TinyShell como componentes dos checkouts irmãos (`../../BTPDevice` etc.), como no bally_OS | Testa o código da lib que ainda não tem release |
 | K4 | Primeiro link: **Serial (USB nativo)**; depois TCP e BLE | Serial não precisa de chave nem de Wi-Fi: menos variáveis no primeiro teste |
-| K5 | Microfone: o mesmo caminho analógico de hoje (GPIO17), com `adc_oneshot` numa task própria no core 1 | Já funciona no hardware; o PCM1808 (I2S) fica para depois (etapa 7) |
+| K5 | Microfone: MAX4466 no ADC (GPIO17), com `adc_oneshot` numa task própria no core 1 | É o que o protótipo tem, e já funciona |
 | K6 | Display: driver ST7735 próprio sobre `esp_lcd` (panel IO SPI) + LVGL 8 | TFT_eSPI é Arduino; o `esp_lcd` do IDF não tem ST7735 pronto, mas a sequência de init é curta (portar a do TFT_eSPI, BLACKTAB) |
 | K7 | Sem senhas no código: Wi-Fi em `wifi.txt` e chave em `bally.key`, gravados na partição LittleFS com `pio run -t uploadfs` | É o provisionamento da BTPDevice |
 | K8 | Console (`ESP_LOGx`) na UART0 (pinos `tx`/`rx` do conector); o USB nativo é da BTPDevice | O USB não serve aos dois ao mesmo tempo; logs de aplicação também vão para o TraceView (`btpdev::log`) |
@@ -87,7 +88,7 @@ Nada de lógica dentro de uma classe-deus: um módulo por coisa (`Audio`,
 ### Etapa 4: TCP e BLE
 - [ ] `wifi.txt` + `bally.key` em `firmware/data/` → `pio run -t uploadfs`.
 - [ ] TCP (`kynowave.local:44300`) e BLE com o TraceView, cifrados; `btp -link_set` para trocar.
-- [ ] **Verificar ADC2 com Wi-Fi ligado** (GPIO17 é ADC2; no ESP32-S3 o Wi-Fi tem prioridade sobre o ADC2 e a leitura pode falhar). Se falhar: medir a taxa de erro, e decidir entre BLE para o KynoWave ou a etapa 7.
+- [ ] **Verificar ADC2 com Wi-Fi ligado** (GPIO17 é ADC2; no ESP32-S3 o Wi-Fi tem prioridade sobre o ADC2 e a leitura pode falhar). Se falhar: medir a taxa de erro e decidir entre BLE/Serial para o KynoWave ou passar o microfone para um pino do ADC1 (GPIO1..10) na próxima revisão da placa.
 - **Pronto quando:** os três links funcionam com a mesma telemetria.
 
 ### Etapa 5: exemplo na BTPDevice
@@ -98,15 +99,15 @@ Nada de lógica dentro de uma classe-deus: um módulo por coisa (`Audio`,
 - [ ] Remover `software_mvp/` e `software_mvp.zip` do repositório.
 - [ ] README do firmware (gravar, provisionar, TraceView).
 
-### Etapa 7 (depois): áudio de verdade
-- PCM1808 por I2S (24 bits, sem o problema do ADC2 com Wi-Fi), dois canais.
+### Etapa 7 (depois)
+- Mais do que intensidade: espectro por bandas, eventos de ruído.
 - Sensores ambientais (I2C), microSD, botões.
 
 ## 5. Riscos
 
 | Risco | Mitigação |
 |---|---|
-| ADC2 (GPIO17) disputado com o Wi-Fi | Serial e BLE primeiro; medir no TCP; o PCM1808 por I2S resolve de vez |
+| ADC2 (GPIO17) disputado com o Wi-Fi | Serial e BLE primeiro; medir no TCP; se não servir, microfone num pino do ADC1 na próxima placa |
 | Sem console no USB (é da BTPDevice) | Console na UART0 do conector; `btpdev::log` para o TraceView |
 | ST7735 sem driver pronto no IDF | Init curto, portado do TFT_eSPI; se travar, usar o componente de terceiros |
 | Senhas no histórico do git (`platformio.ini` do `software_mvp`) | Não vão para o firmware novo; trocar a senha do Wi-Fi se o repositório for público |
