@@ -4,9 +4,11 @@
 
 inline const btpdev::DeviceConfig device_config = {
     .name = "kynowave",
-    // The native USB port: no key, no Wi-Fi. TCP and BLE come later
-    // (docs/PLANO_BTPDEVICE.md, etapa 4).
-    .link = btpdev::Link::Serial,
+    // The link saved with `btp -link_set <serial|tcp>` (applies at the next
+    // boot); the native USB port while nothing is saved. TCP needs bally.key
+    // and wifi.txt in data/ (pio run -t uploadfs); without the key the
+    // library stays on USB.
+    .link = btpdev::Link::FromSettings,
     // Medium: a 16 KB send queue, room for several 2 KB audio blocks.
     .memory = btpdev::Memory::Medium,
     .source_info = {{"board", "Board", "KynoWave prototype"},

@@ -16,7 +16,6 @@ constexpr const char* kTag = "display";
 constexpr int kTopBarHeight = 18;
 constexpr uint32_t kTickMs = 10;          // LVGL timer handler period
 constexpr uint32_t kRefreshMs = 100;      // level and status: 10 Hz
-constexpr float kLevelMinDb = -90.0f;
 // At least one tick: with the default 100 Hz tick, pdMS_TO_TICKS(5) is 0.
 constexpr TickType_t kLockWait = pdMS_TO_TICKS(10) > 0 ? pdMS_TO_TICKS(10) : 1;
 
@@ -173,17 +172,11 @@ void Display::build_ui() {
     lv_label_set_text(time_label_, "00:00:00");
     lv_obj_align(time_label_, LV_ALIGN_RIGHT_MID, -2, 0);
 
-    // Microphone level: dBFS and a bar.
+    // Microphone level in dBFS (the LEDs are the bar).
     level_label_ = lv_label_create(screen);
     lv_obj_set_style_text_font(level_label_, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(level_label_, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(level_label_, LV_ALIGN_TOP_MID, 0, kTopBarHeight + 4);
-
-    level_bar_ = lv_bar_create(screen);
-    lv_obj_set_size(level_bar_, St7735::kWidth - 8, 10);
-    lv_obj_align(level_bar_, LV_ALIGN_TOP_MID, 0, kTopBarHeight + 30);
-    lv_bar_set_range(level_bar_, static_cast<int32_t>(kLevelMinDb), 0);
-    lv_obj_set_style_bg_color(level_bar_, lv_color_hex(0x00C060), LV_PART_INDICATOR);
 
     // Log.
     log_label_ = lv_label_create(screen);
@@ -192,7 +185,7 @@ void Display::build_ui() {
     lv_obj_set_style_text_color(log_label_, lv_color_hex(0xCCCCCC), 0);
     lv_label_set_long_mode(log_label_, LV_LABEL_LONG_CLIP);
     lv_label_set_text(log_label_, "");
-    lv_obj_align(log_label_, LV_ALIGN_TOP_LEFT, 2, kTopBarHeight + 46);
+    lv_obj_align(log_label_, LV_ALIGN_TOP_LEFT, 2, kTopBarHeight + 30);
 
     lv_scr_load(screen);
 }
@@ -235,7 +228,6 @@ void Display::refresh_level() {
     char text[16];
     std::snprintf(text, sizeof(text), "%.1f dBFS", static_cast<double>(rounded));
     lv_label_set_text(level_label_, text);
-    lv_bar_set_value(level_bar_, static_cast<int32_t>(dbfs), LV_ANIM_OFF);
 }
 
 void Display::refresh_log() {

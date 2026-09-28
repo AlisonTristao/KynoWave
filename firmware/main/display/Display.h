@@ -71,7 +71,6 @@ private:
     lv_obj_t* time_label_ = nullptr;
     lv_obj_t* wifi_icon_ = nullptr;
     lv_obj_t* level_label_ = nullptr;
-    lv_obj_t* level_bar_ = nullptr;
     lv_obj_t* log_label_ = nullptr;
     static constexpr int kWifiIconW = 22;
     static constexpr int kWifiIconH = 12;
