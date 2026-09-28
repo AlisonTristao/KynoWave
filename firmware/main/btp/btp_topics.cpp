@@ -4,7 +4,7 @@
 void app_topics(btpdev::Topics& t) {
     // Every microphone sample, in blocks of one DMA frame (~12 ms at 83 kHz):
     // TraceView's Audio Spectrum widget plays it and shows its FFT. 16 blocks
-    // (~200 ms) wait here when USB is busy for a moment.
+    // (~200 ms, 33 KB -- in PSRAM) wait here when the link is busy a moment.
     t.stream(kAudioStream, Audio::kBlockSamples, "counts", 16)
         .range(-Audio::kFullScale, Audio::kFullScale - 1);
 

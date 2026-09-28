@@ -10,9 +10,10 @@ namespace {
 constexpr const char* kTag = "leds";
 constexpr ledc_mode_t kMode = LEDC_LOW_SPEED_MODE;
 constexpr ledc_timer_t kTimer = LEDC_TIMER_0;
-constexpr uint32_t kFullDuty = 255;
+// 2^8 on an 8-bit timer: steady on, no 5 kHz switching (255 left a pulse).
+constexpr uint32_t kFullDuty = 256;
 // The first two LEDs are much brighter than the rest: dimmed to match.
-constexpr uint32_t kDimDuty = kFullDuty / 10;
+constexpr uint32_t kDimDuty = 25;
 
 }  // namespace
 
@@ -48,11 +49,18 @@ void Leds::show_level(float rms) {
         return;
     }
     const float step = static_cast<float>(this->step());
-    uint8_t mask = 0;
+    int target = 0;
     for (int i = 0; i < board::kLedCount; ++i) {
-        if (rms > i * step) mask |= static_cast<uint8_t>(1U << i);
+        if (rms > i * step) target = i + 1;
     }
-    apply(mask);
+    if (target >= lit_) {
+        lit_ = target;
+        release_calls_ = 0;
+    } else if (++release_calls_ >= kReleaseCalls) {
+        --lit_;
+        release_calls_ = 0;
+    }
+    apply(static_cast<uint8_t>((1U << lit_) - 1U));
 }
 
 void Leds::set_mask(uint8_t mask) {

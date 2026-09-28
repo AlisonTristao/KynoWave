@@ -10,10 +10,15 @@
 class Leds {
 public:
     static constexpr uint16_t kDefaultStep = 9;   // RMS counts per LED (as in the MVP)
+    static constexpr int kReleaseCalls = 3;         // 150 ms per LED going out
 
     esp_err_t begin();
 
-    /// VU mode: LED i lights when rms > i * step. Call at the level's rate.
+    /// VU mode: LED i lights when rms > i * step. Call at the level's rate
+    /// (every 50 ms). A LED lights at once but goes out only one at a time,
+    /// every kReleaseCalls calls: a level sitting on a threshold no longer
+    /// switches LEDs 20 times a second (each switch is a current step the
+    /// LCD backlight and the microphone felt).
     void show_level(float rms);
 
     /// Fixed pattern (bit i = LED i); leaves VU mode.
@@ -28,6 +33,8 @@ private:
 
     bool ready_ = false;
     uint8_t shown_ = 0xFF;   // mask on the pins now (0xFF: never written)
+    int lit_ = 0;            // VU: LEDs lit now
+    int release_calls_ = 0;
     std::atomic<bool> vu_{true};
     std::atomic<uint16_t> step_{kDefaultStep};
     std::atomic<uint8_t> mask_{0};

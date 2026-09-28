@@ -1,5 +1,6 @@
 // What TraceView's terminal can call (besides the library's own `btp`).
 #include "app.h"
+#include "board.h"
 
 static uint8_t audio_stats() {
     const Audio::Stats s = audio.stats();
@@ -61,10 +62,12 @@ void app_commands(btpdev::Commands& c) {
         .add("stats", audio_stats, "audio -stats")
         .add("rate", audio_rate, "audio -rate <8000..83333 Hz>")
         .add("band", audio_band, "audio -band <high-pass Hz> <low-pass Hz>: band-pass, 0 = side off");
-    c.module("leds", "Front LEDs")
-        .add("vu", leds_vu, "leds -vu <0|1>: VU meter on/off")
-        .add("step", leds_step, "leds -step <counts>: RMS per LED in the VU meter")
-        .add("set", leds_set, "leds -set <mask>: fixed pattern, bit i = LED i");
+    if (board::kLedsEnabled) {
+        c.module("leds", "Front LEDs")
+            .add("vu", leds_vu, "leds -vu <0|1>: VU meter on/off")
+            .add("step", leds_step, "leds -step <counts>: RMS per LED in the VU meter")
+            .add("set", leds_set, "leds -set <mask>: fixed pattern, bit i = LED i");
+    }
     c.module("display", "LCD")
         .add("backlight", display_backlight, "display -backlight <0|1>");
 }

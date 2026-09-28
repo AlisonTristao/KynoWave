@@ -2,6 +2,13 @@ CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# The ESP32-S3R8's 8 MB octal PSRAM, added to the heap: Wi-Fi + TCP + the audio
+# stream do not fit in the internal RAM. It takes GPIO33..37 (LEDs 5/6 off).
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
 # app_main runs BtpDevice::begin() and then the UI loop: more than the 3.5 KB default.
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 
@@ -11,6 +18,10 @@ CONFIG_TINYUSB_CDC_ENABLED=y
 CONFIG_TINYUSB_CDC_COUNT=1
 # The audio stream is ~170 KB/s: a CDC TX FIFO of a few frames keeps USB busy.
 CONFIG_TINYUSB_CDC_TX_BUFSIZE=8192
+
+# BENCH ONLY: TCP without the device key, in clear text (anyone on the Wi-Fi
+# can listen and send commands). Remove it and provision bally.key to ship.
+CONFIG_BTPDEV_INSECURE_CLEARTEXT_RADIO=y
 CONFIG_ESP_CONSOLE_UART_DEFAULT=y
 
 # LVGL 8 for the ST7735 (128x160, RGB565 sent big-endian over SPI).

@@ -77,7 +77,7 @@ void show_link(btpdev::State state) {
 }  // namespace
 
 extern "C" void app_main() {
-    if (leds.begin() != ESP_OK) ESP_LOGW(kTag, "no LEDs");
+    if (board::kLedsEnabled && leds.begin() != ESP_OK) ESP_LOGW(kTag, "no LEDs");
     if (display.begin(kAppCore) != ESP_OK) ESP_LOGW(kTag, "no display");
     display.log("KynoWave");
     if (audio.begin(board::kMic, kAppCore, stream_block) != ESP_OK) display.log("microfone: erro no ADC");
@@ -94,7 +94,7 @@ extern "C" void app_main() {
 
     btpdev::State shown = btpdev::State::Stopped;
     for (uint32_t tick = 0;; ++tick) {
-        leds.show_level(audio.rms());
+        if (board::kLedsEnabled) leds.show_level(audio.rms());
         display.set_level(audio.dbfs());
 
         const btpdev::State state = device.state();
